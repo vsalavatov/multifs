@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "1.5.10"
+    kotlin("multiplatform") version "1.5.31"
 }
 
 group = "dev.salavatov"
@@ -43,10 +43,24 @@ kotlin {
             }
         }
         val jvmMain by getting
-        val jvmTest by getting
+        val jvmTest by getting {
+            dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.1")
+            }
+        }
         val jsMain by getting
         val jsTest by getting
         val nativeMain by getting
         val nativeTest by getting
+    }
+}
+
+tasks.named<Test>("jvmTest") {
+    useJUnitPlatform()
+    testLogging {
+        showExceptions = true
+        showStandardStreams = true
+        events = setOf(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED, org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED)
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
