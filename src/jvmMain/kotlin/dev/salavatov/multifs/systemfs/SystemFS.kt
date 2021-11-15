@@ -7,7 +7,7 @@ import kotlin.io.path.*
 
 class SystemFS : VFS, RootFolder by SystemRoot
 
-open class SystemNode(protected val nioPath: Path): VFSNode {
+sealed class SystemNode(protected val nioPath: Path): VFSNode {
     override val name: String
         get() = nioPath.fileName.name
     override val parent: Folder
@@ -39,7 +39,6 @@ open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
                 when (it) {
                     is SystemFolder -> it.remove(true)
                     is SystemFile -> it.remove()
-                    else -> throw VFSException("unexpected vfs child: ${it.absolutePath}")
                 }
             }
         }
