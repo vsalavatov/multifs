@@ -13,6 +13,9 @@ kotlin {
     jvm {
         compilations.all {
             kotlinOptions.jvmTarget = "1.8"
+            kotlinOptions.freeCompilerArgs += listOf(
+                "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi"
+            )
         }
         testRuns["test"].executionTask.configure {
             useJUnit()

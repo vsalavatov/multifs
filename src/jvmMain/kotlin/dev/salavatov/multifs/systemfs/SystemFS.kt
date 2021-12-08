@@ -5,7 +5,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
 
-class SystemFS : VFS, RootFolder by SystemRoot
+class SystemFS : VFS, RootFolder by SystemRoot {
+    companion object {
+        fun AbsolutePath.represent(): String = joinToString("/", "/")
+    }
+
+    override fun AbsolutePath.represent(): String = SystemFS.Companion.run { represent() }
+}
 
 sealed class SystemNode(protected val nioPath: Path): VFSNode {
     override val name: String
@@ -15,12 +21,11 @@ sealed class SystemNode(protected val nioPath: Path): VFSNode {
     override val absolutePath: AbsolutePath
         get() = simpleAbsolutePath(this)
 
-    override fun toString(): String =
-        absolutePath.joinToString("/", "/")
+    override fun toString(): String = SystemFS.run { absolutePath.represent() }
 }
 
 open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
-    override fun listFolder(): List<SystemNode> =
+    override suspend fun listFolder(): List<SystemNode> =
         nioPath.listDirectoryEntries().map {
             if (it.isDirectory()) {
                 SystemFolder(it)
@@ -31,9 +36,9 @@ open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
             }
         }
 
-    override fun createFolder(name: PathPart) = SystemFolder((nioPath / name).createDirectory())
+    override suspend fun createFolder(name: PathPart) = SystemFolder((nioPath / name).createDirectory())
 
-    override fun remove(recursively: Boolean) {
+    override suspend fun remove(recursively: Boolean) {
         if (recursively) {
             listFolder().forEach {
                 when (it) {
@@ -45,9 +50,9 @@ open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
         nioPath.deleteExisting()
     }
 
-    override fun createFile(name: PathPart) = SystemFile((nioPath / name).createFile())
+    override suspend fun createFile(name: PathPart) = SystemFile((nioPath / name).createFile())
 
-    override fun div(path: PathPart): SystemFolder {
+    override suspend fun div(path: PathPart): SystemFolder {
         val nextPath = nioPath / path
         if (nextPath.isDirectory()) {
             return SystemFolder(nextPath)
@@ -55,7 +60,7 @@ open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
         throw VFSException("expected a directory but it is not: $nextPath")
     }
 
-    override fun rem(path: PathPart): SystemFile {
+    override suspend fun rem(path: PathPart): SystemFile {
         val nextPath = nioPath / path
         if (nextPath.isRegularFile()) {
             return SystemFile(nextPath)
@@ -74,7 +79,7 @@ object SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root), RootFold
 }
 
 class SystemFile(nioPath: Path): SystemNode(nioPath), File {
-    override fun remove() {
+    override suspend fun remove() {
         nioPath.deleteExisting()
     }
 

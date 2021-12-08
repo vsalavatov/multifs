@@ -23,6 +23,6 @@ class SystemFSTest {
         tmpfile.write(data)
         assertContentEquals(tmpfile.read(), data)
         tmpfile.remove()
-        assertThrows<VFSException> { projectDir / "build" % "tmpfile" }
+        assertThrows<VFSException> { runBlocking { projectDir / "build" % "tmpfile" } }
     }
 }
