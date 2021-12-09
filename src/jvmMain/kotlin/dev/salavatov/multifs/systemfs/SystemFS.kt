@@ -24,7 +24,7 @@ sealed class SystemNode(protected val nioPath: Path): VFSNode {
     override fun toString(): String = SystemFS.run { absolutePath.represent() }
 }
 
-open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
+open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder { // TODO: shouldn't be open, I guess. proxy?
     override suspend fun listFolder(): List<SystemNode> =
         nioPath.listDirectoryEntries().map {
             if (it.isDirectory()) {
