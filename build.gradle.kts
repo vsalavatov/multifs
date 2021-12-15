@@ -1,10 +1,11 @@
 plugins {
     kotlin("multiplatform") version "1.5.31"
     kotlin("plugin.serialization") version "1.5.31"
+    id("maven-publish")
 }
 
 group = "dev.salavatov"
-version = "1.0"
+version = "0.0.1"
 
 repositories {
     mavenCentral()
@@ -65,6 +66,7 @@ kotlin {
             dependencies {
                 implementation("io.ktor:ktor-client-cio:$ktorVersion")
 
+                // implementation("io.ktor:ktor-server-core:$ktorVersion")
                 implementation("io.ktor:ktor-server-core:$ktorVersion")
                 implementation("io.ktor:ktor-server-cio:$ktorVersion")
             }

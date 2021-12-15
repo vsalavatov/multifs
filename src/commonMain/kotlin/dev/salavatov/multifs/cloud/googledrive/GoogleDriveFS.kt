@@ -2,6 +2,8 @@ package dev.salavatov.multifs.cloud.googledrive
 
 import dev.salavatov.multifs.vfs.*
 
+class GoogleDriveFSException(message: String? = null, cause: Throwable? = null) : VFSException(message, cause)
+
 class GoogleDriveFS(private val api: GoogleDriveAPI) : VFS, RootFolder {
     private val root = GDriveRoot(this)
 
@@ -24,7 +26,7 @@ sealed class GDriveNode(protected val fs: GoogleDriveFS, protected val path: Abs
     override val name: String
         get() = if (path.isEmpty()) "" else path.last()
     override val parent: Folder
-        get() = GDriveFolder(
+        get() = GDriveFolder(  // Root if path.isEmpty
             fs, if (path.isEmpty()) {
                 path
             } else {
