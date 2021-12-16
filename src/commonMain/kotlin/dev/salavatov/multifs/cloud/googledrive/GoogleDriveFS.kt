@@ -47,7 +47,14 @@ open class GDriveFolder(
     }
 
     override suspend fun remove(recursively: Boolean) {
-        TODO("Not yet implemented")
+        if (recursively) {
+            return fs.api.delete(id)
+        }
+        val children = listFolder()
+        if (children.isEmpty()) {
+            return fs.api.delete(id)
+        }
+        throw GoogleDriveFSException("cannot delete folder $id non-recursively as it contains children")
     }
 
     override suspend fun createFile(name: PathPart): GDriveFile {
@@ -89,7 +96,7 @@ class GDriveFile(
     val mimeType: String
 ) : GDriveNode(fs, id, name), File {
     override suspend fun remove() {
-        TODO("Not yet implemented")
+        return fs.api.delete(id)
     }
 
     override suspend fun read(): ByteArray {

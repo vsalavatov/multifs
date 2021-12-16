@@ -168,5 +168,13 @@ class GoogleDriveAPI(
         }
     }
 
+    suspend fun delete(id: String) {
+        val endpoint = "https://www.googleapis.com/drive/v3/files/$id"
+        val response = apiClient.delete(endpoint)
+        if (response.status.value != 204 && response.status.value != 200) {
+            throw GoogleDriveAPIException("failed to delete file $id: ${response.status}")
+        }
+    }
+
     private val FOLDER_MIMETYPE = "application/vnd.google-apps.folder"
 }
