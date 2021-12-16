@@ -9,7 +9,7 @@ data class GoogleAppCredentials(val clientId: String, val secret: String)
 data class GoogleAuthTokens(
     @SerialName("access_token") val accessToken: String,
     @SerialName("expires_in") val expiresIn: Int,
-    @SerialName("refresh_token") val refreshToken: String?
+    @SerialName("refresh_token") val refreshToken: String? = null
 )
 
 interface GoogleAuthenticator {

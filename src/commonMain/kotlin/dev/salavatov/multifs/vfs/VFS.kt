@@ -1,5 +1,7 @@
 package dev.salavatov.multifs.vfs
 
-interface VFS : RootFolder {
+interface VFS {
+    val root: RootFolder
+
     fun AbsolutePath.represent(): String
 }

@@ -2,86 +2,101 @@ package dev.salavatov.multifs.cloud.googledrive
 
 import dev.salavatov.multifs.vfs.*
 
-class GoogleDriveFSException(message: String? = null, cause: Throwable? = null) : VFSException(message, cause)
+class GoogleDriveFS(internal val api: GoogleDriveAPI) : VFS {
+    override val root = GDriveRoot(this)
 
-class GoogleDriveFS(private val api: GoogleDriveAPI) : VFS, RootFolder {
-    private val root = GDriveRoot(this)
-
-    override suspend fun listFolder(): List<VFSNode> = root.listFolder()
-
-    override suspend fun createFolder(name: PathPart): Folder = root.createFolder(name)
-
-    override suspend fun remove(recursively: Boolean) = root.remove(recursively)
-
-    override suspend fun createFile(name: PathPart): File = root.createFile(name)
-
-    override suspend fun div(path: PathPart): Folder = root.div(path)
-
-    override suspend fun rem(path: PathPart): File = root.rem(path)
-
-    override fun AbsolutePath.represent(): String = TODO()
+    override fun AbsolutePath.represent(): String = this.joinToString("/", "/") // no native representation ?
 }
 
-sealed class GDriveNode(protected val fs: GoogleDriveFS, protected val path: AbsolutePath) : VFSNode {
+sealed class GDriveNode(
+    protected val fs: GoogleDriveFS,
+    val id: String,
     override val name: String
-        get() = if (path.isEmpty()) "" else path.last()
-    override val parent: Folder
-        get() = GDriveFolder(  // Root if path.isEmpty
-            fs, if (path.isEmpty()) {
-                path
-            } else {
-                path.subList(0, path.size - 1)
-            }
-        )
+) : VFSNode {
     override val absolutePath: AbsolutePath
-        get() = path
+        get() = if (id != "root") {
+            parent.absolutePath + name
+        } else {
+            emptyList()
+        }
 }
 
-open class GDriveFolder(fs: GoogleDriveFS, path: AbsolutePath) : GDriveNode(fs, path), Folder {
-    override suspend fun listFolder(): List<VFSNode> {
-        TODO("Not yet implemented")
+open class GDriveFolder(
+    fs: GoogleDriveFS,
+    private val parent_: GDriveFolder?,
+    id: String,
+    name: String
+) : GDriveNode(fs, id, name), Folder {
+
+    private fun GDriveNativeNodeData.convert(): GDriveNode {
+        val folder = this@GDriveFolder
+        return when (this) {
+            is GDriveNativeFileData -> GDriveFile(fs, folder, this.id, this.name, this.size, this.mimeType)
+            is GDriveNativeFolderData -> GDriveFolder(fs, folder, this.id, this.name)
+        }
     }
 
-    override suspend fun createFolder(name: PathPart): Folder {
-        TODO("Not yet implemented")
+    override suspend fun listFolder(): List<GDriveNode> {
+        val rawEntries = fs.api.list(id)
+        return rawEntries.map { it.convert() }
+    }
+
+    override suspend fun createFolder(name: PathPart): GDriveFolder {
+        val rawEntry = fs.api.createFolder(name, id)
+        return rawEntry.convert() as GDriveFolder
     }
 
     override suspend fun remove(recursively: Boolean) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun createFile(name: PathPart): File {
-        TODO("Not yet implemented")
+    override suspend fun createFile(name: PathPart): GDriveFile {
+        val rawEntry = fs.api.createFile(name, id)
+        return rawEntry.convert() as GDriveFile
     }
 
-    override suspend fun div(path: PathPart): Folder {
-        TODO("Not yet implemented")
+    override suspend fun div(path: PathPart): GDriveFolder { // TODO: optimize
+        val entries = listFolder()
+        return entries.find { it.name == path && it is GDriveFolder } as? GDriveFolder
+            ?: throw GoogleDriveDirectoryNotFoundException("$path wasn't found in $absolutePath")
     }
 
-    override suspend fun rem(path: PathPart): File {
-        TODO("Not yet implemented")
+    override suspend fun rem(path: PathPart): GDriveFile { // TODO: optimize
+        val entries = listFolder()
+        return entries.find { it.name == path && it is GDriveFile } as? GDriveFile
+            ?: throw GoogleDriveDirectoryNotFoundException("$path wasn't found in $absolutePath")
     }
+
+    override val parent: GDriveFolder
+        get() = parent_ ?: this
 }
 
-class GDriveRoot(fs: GoogleDriveFS) : GDriveFolder(fs, emptyList()), RootFolder {
+class GDriveRoot(fs: GoogleDriveFS) : GDriveFolder(fs, null, "root", ""), RootFolder {
     override val name: String
         get() = ""
-    override val parent: Folder
+    override val parent: GDriveFolder
         get() = this
     override val absolutePath: AbsolutePath
         get() = emptyList()
 }
 
-class GDriveFile(fs: GoogleDriveFS, path: AbsolutePath) : GDriveNode(fs, path), File {
+class GDriveFile(
+    fs: GoogleDriveFS,
+    override val parent: Folder,
+    id: String,
+    name: String,
+    val size: Long,
+    val mimeType: String
+) : GDriveNode(fs, id, name), File {
     override suspend fun remove() {
         TODO("Not yet implemented")
     }
 
     override suspend fun read(): ByteArray {
-        TODO("Not yet implemented")
+        return fs.api.download(id)
     }
 
     override suspend fun write(data: ByteArray) {
-        TODO("Not yet implemented")
+        return fs.api.upload(id, data)
     }
 }

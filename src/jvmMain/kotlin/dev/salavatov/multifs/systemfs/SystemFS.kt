@@ -5,10 +5,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
 
-class SystemFS : VFS, RootFolder by SystemRoot {
+class SystemFS : VFS {
     companion object {
         fun AbsolutePath.represent(): String = joinToString("/", "/")
     }
+
+    override val root: RootFolder
+        get() = SystemRoot
 
     override fun AbsolutePath.represent(): String = SystemFS.Companion.run { represent() }
 }

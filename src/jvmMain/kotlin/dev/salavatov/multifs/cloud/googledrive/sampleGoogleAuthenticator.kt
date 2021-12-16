@@ -27,7 +27,7 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
             routing {
                 get("/") {
                     val code = context.request.queryParameters["code"]
-                        ?: throw GoogleDriveFSException("authenticator: unexpected callback result: params: ${context.request.queryParameters}")
+                        ?: throw GoogleDriveAPIException("authenticator: unexpected callback result: params: ${context.request.queryParameters}")
                     tokensFuture.complete(exchangeAuthCodeOnTokens(baseRedirectUri, code))
                     call.respondText(
                         """
@@ -87,12 +87,12 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
                 append("grant_type", "authorization_code")
                 append("redirect_uri", redirectUri)
             })
-        if (response.status.value != 200) throw GoogleDriveFSException("authenticator: failed to get tokens: status ${response.status}")
+        if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to get tokens: ${response.status}")
         val rawData = response.bodyAsText()
         return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
     }
 
-    override suspend fun refresh(expired: GoogleAuthTokens): GoogleAuthTokens { // TODO: test this implementation
+    override suspend fun refresh(expired: GoogleAuthTokens): GoogleAuthTokens {
         val tokenClient = HttpClient()
         val response =
             tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
@@ -101,7 +101,7 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
                 append("client_secret", appCredentials.secret)
                 append("grant_type", "refresh_token")
             })
-        if (response.status.value != 200) throw GoogleDriveFSException("authenticator: failed to refresh tokens: status ${response.status}")
+        if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to refresh tokens: ${response.status}")
         val rawData = response.bodyAsText()
         return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
     }

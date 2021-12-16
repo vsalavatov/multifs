@@ -66,7 +66,6 @@ kotlin {
             dependencies {
                 implementation("io.ktor:ktor-client-cio:$ktorVersion")
 
-                // implementation("io.ktor:ktor-server-core:$ktorVersion")
                 implementation("io.ktor:ktor-server-core:$ktorVersion")
                 implementation("io.ktor:ktor-server-cio:$ktorVersion")
             }

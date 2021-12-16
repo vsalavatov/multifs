@@ -1,7 +1,6 @@
 package dev.salavatov.multifs.systemfs
 
 import dev.salavatov.multifs.vfs.VFSException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Test
@@ -14,8 +13,8 @@ class SystemFSTest {
     @Test
     fun `basic SystemFS sanity check`() = runBlockingTest {
         val fs = SystemFS()
-        assertEquals("[]", fs.absolutePath.toString())
-        val projectDir = fs / "home" / "vsalavatov" / "Projects" / "bsse-diploma" / "multifs"
+        assertEquals("[]", fs.root.absolutePath.toString())
+        val projectDir = fs.root / "home" / "vsalavatov" / "Projects" / "bsse-diploma" / "multifs"
         val gitignoreFile = projectDir % ".gitignore"
         assertTrue(gitignoreFile.read().decodeToString().startsWith(".idea/**"))
         val tmpfile = (projectDir / "build").createFile("tmpfile")
