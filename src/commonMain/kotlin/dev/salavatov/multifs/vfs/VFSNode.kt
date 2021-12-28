@@ -9,8 +9,8 @@ interface VFSNode {
 interface File : VFSNode {
     suspend fun remove()
 
-    suspend fun read(): ByteArray // InputStreamByteArray ?
-    suspend fun write(data: ByteArray) // OutputStreamByteArray ?
+    suspend fun read(): ByteArray
+    suspend fun write(data: ByteArray)
 }
 
 interface Folder : VFSNode {

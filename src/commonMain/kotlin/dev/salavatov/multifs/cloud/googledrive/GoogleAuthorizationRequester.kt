@@ -12,7 +12,7 @@ data class GoogleAuthTokens(
     @SerialName("refresh_token") val refreshToken: String? = null
 )
 
-interface GoogleAuthenticator {
-    suspend fun authenticate(): GoogleAuthTokens
-    suspend fun refresh(expired: GoogleAuthTokens): GoogleAuthTokens
+interface GoogleAuthorizationRequester {
+    suspend fun requestAuthorization(): GoogleAuthTokens
+    suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens
 }

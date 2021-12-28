@@ -1,26 +1,18 @@
 package dev.salavatov.multifs.cloud.googledrive
 
-import dev.salavatov.multifs.vfs.AbsolutePath
-import dev.salavatov.multifs.vfs.VFSException
 import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.features.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
-import io.ktor.client.plugins.json.*
-import io.ktor.client.plugins.json.serializer.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.content.*
-import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 
 
 class GoogleDriveAPI(
-    private val authenticator: GoogleAuthenticator
+    private val authenticator: GoogleAuthorizationRequester
 ) {
     private val apiClient = HttpClient {
         expectSuccess = false
@@ -29,14 +21,14 @@ class GoogleDriveAPI(
 
             bearer {
                 loadTokens {
-                    tokenInfo = authenticator.authenticate()
+                    tokenInfo = authenticator.requestAuthorization()
                     BearerTokens(
                         accessToken = tokenInfo.accessToken, refreshToken = tokenInfo.refreshToken!!
                     )
                 }
 
                 refreshTokens {
-                    val refreshTokenInfo = authenticator.refresh(tokenInfo)
+                    val refreshTokenInfo = authenticator.refreshAuthorization(tokenInfo)
                     tokenInfo = GoogleAuthTokens(
                         refreshTokenInfo.accessToken,
                         refreshTokenInfo.expiresIn,

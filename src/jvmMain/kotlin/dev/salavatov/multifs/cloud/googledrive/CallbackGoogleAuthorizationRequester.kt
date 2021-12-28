@@ -18,8 +18,8 @@ import java.net.URI
 import java.net.URL
 import java.util.*
 
-class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentials) : GoogleAuthenticator {
-    override suspend fun authenticate(): GoogleAuthTokens {
+class CallbackGoogleAuthorizationRequester(private val appCredentials: GoogleAppCredentials) : GoogleAuthorizationRequester {
+    override suspend fun requestAuthorization(): GoogleAuthTokens {
         val tokensFuture = CompletableDeferred<GoogleAuthTokens>()
 
         lateinit var baseRedirectUri: String
@@ -92,7 +92,7 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
         return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
     }
 
-    override suspend fun refresh(expired: GoogleAuthTokens): GoogleAuthTokens {
+    override suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens {
         val tokenClient = HttpClient() { expectSuccess = false }
         val response =
             tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
@@ -102,7 +102,7 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
                 append("grant_type", "refresh_token")
             })
         if (response.status.value == 400 && response.bodyAsText().contains("expired")) {
-            return authenticate()
+            return requestAuthorization()
         }
         if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to refresh tokens: ${response.status}")
         val rawData = response.bodyAsText()
