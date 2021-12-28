@@ -78,7 +78,7 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
     ).toURI()
 
     private suspend fun exchangeAuthCodeOnTokens(redirectUri: String, code: String): GoogleAuthTokens {
-        val tokenClient = HttpClient()
+        val tokenClient = HttpClient() { expectSuccess = false }
         val response =
             tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
                 append("code", code)
@@ -93,7 +93,7 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
     }
 
     override suspend fun refresh(expired: GoogleAuthTokens): GoogleAuthTokens {
-        val tokenClient = HttpClient()
+        val tokenClient = HttpClient() { expectSuccess = false }
         val response =
             tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
                 append("refresh_token", expired.refreshToken!!)
@@ -101,12 +101,11 @@ class CallbackGoogleAuthenticator(private val appCredentials: GoogleAppCredentia
                 append("client_secret", appCredentials.secret)
                 append("grant_type", "refresh_token")
             })
+        if (response.status.value == 400 && response.bodyAsText().contains("expired")) {
+            return authenticate()
+        }
         if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to refresh tokens: ${response.status}")
         val rawData = response.bodyAsText()
         return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
     }
-}
-
-actual fun sampleGoogleAuthenticator(appCredentials: GoogleAppCredentials): GoogleAuthenticator {
-    return CallbackGoogleAuthenticator(appCredentials)
 }

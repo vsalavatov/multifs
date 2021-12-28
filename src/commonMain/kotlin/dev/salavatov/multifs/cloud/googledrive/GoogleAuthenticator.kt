@@ -16,5 +16,3 @@ interface GoogleAuthenticator {
     suspend fun authenticate(): GoogleAuthTokens
     suspend fun refresh(expired: GoogleAuthTokens): GoogleAuthTokens
 }
-
-expect fun sampleGoogleAuthenticator(appCredentials: GoogleAppCredentials): GoogleAuthenticator // TODO: rename?

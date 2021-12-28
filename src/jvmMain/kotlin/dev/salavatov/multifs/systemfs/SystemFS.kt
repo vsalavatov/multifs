@@ -1,22 +1,31 @@
 package dev.salavatov.multifs.systemfs
 
 import dev.salavatov.multifs.vfs.*
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
 
-class SystemFS : VFS {
+class SystemFS : VFS<SystemFile, SystemFolder> {
     companion object {
         fun AbsolutePath.represent(): String = joinToString("/", "/")
     }
 
-    override val root: RootFolder
+    override val root: SystemRoot
         get() = SystemRoot
+
+    override suspend fun move(file: SystemFile, newParent: SystemFolder, overwrite: Boolean): SystemFile {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun copy(file: SystemFile, folder: SystemFolder, overwrite: Boolean): SystemFile {
+        TODO("Not yet implemented")
+    }
 
     override fun AbsolutePath.represent(): String = SystemFS.Companion.run { represent() }
 }
 
-sealed class SystemNode(protected val nioPath: Path): VFSNode {
+sealed class SystemNode(internal val nioPath: Path) : VFSNode {
     override val name: String
         get() = nioPath.fileName.name
     override val parent: Folder
@@ -29,7 +38,7 @@ sealed class SystemNode(protected val nioPath: Path): VFSNode {
 
 open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder { // TODO: shouldn't be open, I guess. proxy?
     override suspend fun listFolder(): List<SystemNode> =
-        nioPath.listDirectoryEntries().map {
+        nioPath.listDirectoryEntries().filter { it.isDirectory() || it.isRegularFile() }.map {
             if (it.isDirectory()) {
                 SystemFolder(it)
             } else if (it.isRegularFile()) {
@@ -81,7 +90,7 @@ object SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root), RootFold
         get() = super<RootFolder>.absolutePath
 }
 
-class SystemFile(nioPath: Path): SystemNode(nioPath), File {
+class SystemFile(nioPath: Path) : SystemNode(nioPath), File {
     override suspend fun remove() {
         nioPath.deleteExisting()
     }

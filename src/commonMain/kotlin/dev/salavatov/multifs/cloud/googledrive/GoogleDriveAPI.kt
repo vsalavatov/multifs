@@ -90,7 +90,7 @@ class GoogleDriveAPI(
 
     private fun parseNode(
         entry: JsonObject,
-    ) : GDriveNativeNodeData {
+    ): GDriveNativeNodeData {
         val mimeType = entry["mimeType"]?.jsonPrimitive?.content
             ?: throw GoogleDriveAPIException("response file object doesn't contain 'mimeType' field")
         return if (mimeType == FOLDER_MIMETYPE) {
@@ -121,14 +121,18 @@ class GoogleDriveAPI(
         )
     }
 
-    suspend fun createFile(name: String, parentId: String): GDriveNativeFileData {
+    suspend fun createFile(
+        name: String,
+        parentId: String,
+        mimeType: ContentType = ContentType.Application.OctetStream
+    ): GDriveNativeFileData {
         val endpoint = "https://www.googleapis.com/drive/v3/files"
         val response = apiClient.post(endpoint) {
             parameter("uploadType", "multipart")
             contentType(ContentType.Application.Json)
             @Serializable
             data class Req(val mimeType: String, val name: String, val parents: List<String>)
-            setBody(Json.encodeToString(Req(ContentType.Application.OctetStream.toString(), name, listOf(parentId))))
+            setBody(Json.encodeToString(Req(mimeType.toString(), name, listOf(parentId))))
         }
         if (response.status.value != 200) {
             // TODO: handle it more accurately ?
@@ -156,7 +160,7 @@ class GoogleDriveAPI(
         return response.body()
     }
 
-    suspend fun upload(id: String, data: ByteArray){
+    suspend fun upload(id: String, data: ByteArray) {
         val endpoint = "https://www.googleapis.com/upload/drive/v3/files/$id"
         val response = apiClient.patch(endpoint) {
             parameter("uploadType", "media")

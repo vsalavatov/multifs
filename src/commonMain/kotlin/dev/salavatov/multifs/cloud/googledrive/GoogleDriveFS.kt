@@ -2,14 +2,21 @@ package dev.salavatov.multifs.cloud.googledrive
 
 import dev.salavatov.multifs.vfs.*
 
-class GoogleDriveFS(internal val api: GoogleDriveAPI) : VFS {
+class GoogleDriveFS(internal val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFolder> {
     override val root = GDriveRoot(this)
+
+    override suspend fun move(file: GDriveFile, newParent: GDriveFolder, overwrite: Boolean): GDriveFile {
+        TODO("Not yet implemented")
+    }
+    override suspend fun copy(file: GDriveFile, folder: GDriveFolder, overwrite: Boolean): GDriveFile {
+        TODO("Not yet implemented")
+    }
 
     override fun AbsolutePath.represent(): String = this.joinToString("/", "/") // no native representation ?
 }
 
 sealed class GDriveNode(
-    protected val fs: GoogleDriveFS,
+    internal val fs: GoogleDriveFS,
     val id: String,
     override val name: String
 ) : VFSNode {
@@ -71,7 +78,7 @@ open class GDriveFolder(
     override suspend fun rem(path: PathPart): GDriveFile { // TODO: optimize
         val entries = listFolder()
         return entries.find { it.name == path && it is GDriveFile } as? GDriveFile
-            ?: throw GoogleDriveDirectoryNotFoundException("$path wasn't found in $absolutePath")
+            ?: throw GoogleDriveFileNotFoundException("$path wasn't found in $absolutePath")
     }
 
     override val parent: GDriveFolder
