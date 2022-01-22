@@ -1,9 +1,14 @@
 package dev.salavatov.multifs.vfs
 
-fun simpleAbsolutePath(node: VFSNode): AbsolutePath {
-    var current = node
+fun computeAbsolutePath(node: VFSNode): AbsolutePath {
     val result = mutableListOf<PathPart>()
-    while (current != current.parent) {
+    var current: Folder = if (node is File) {
+        result.add(node.name)
+        node.parent
+    } else {
+        node as Folder
+    }
+    while (!current.isRoot) {
         result.add(current.name)
         current = current.parent
     }

@@ -25,6 +25,9 @@ interface Folder : VFSNode {
     suspend operator fun rem(path: PathPart): File
 }
 
+val Folder.isRoot: Boolean
+    get() = this == this.parent
+
 suspend inline fun <reified T: VFSNode> Folder.find(path: PathPart): T? {
     listFolder().forEach {
         if (it.name == path && it is T) {
@@ -32,13 +35,4 @@ suspend inline fun <reified T: VFSNode> Folder.find(path: PathPart): T? {
         }
     }
     return null
-}
-
-interface RootFolder : Folder {
-    override val parent: Folder
-        get() = this
-    override val name: String
-        get() = ""
-    override val absolutePath: AbsolutePath
-        get() = emptyList()
 }

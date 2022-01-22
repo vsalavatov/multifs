@@ -1,7 +1,6 @@
 package dev.salavatov.multifs.systemfs
 
 import dev.salavatov.multifs.vfs.*
-import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
@@ -31,7 +30,7 @@ sealed class SystemNode(internal val nioPath: Path) : VFSNode {
     override val parent: Folder
         get() = if (nioPath.parent != null) SystemFolder(nioPath.parent) else (this as Folder)
     override val absolutePath: AbsolutePath
-        get() = simpleAbsolutePath(this)
+        get() = computeAbsolutePath(this)
 
     override fun toString(): String = SystemFS.run { absolutePath.represent() }
 }
@@ -81,13 +80,13 @@ open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder { // TODO: 
     }
 }
 
-object SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root), RootFolder {
+object SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root) {
     override val name: String
-        get() = super<RootFolder>.name
+        get() = ""
     override val parent: Folder
-        get() = super<RootFolder>.parent
+        get() = this
     override val absolutePath: AbsolutePath
-        get() = super<RootFolder>.absolutePath
+        get() = emptyList()
 }
 
 class SystemFile(nioPath: Path) : SystemNode(nioPath), File {

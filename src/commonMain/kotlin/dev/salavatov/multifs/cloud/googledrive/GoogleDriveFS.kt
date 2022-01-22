@@ -85,7 +85,7 @@ open class GDriveFolder(
         get() = parent_ ?: this
 }
 
-class GDriveRoot(fs: GoogleDriveFS) : GDriveFolder(fs, null, "root", ""), RootFolder {
+class GDriveRoot(fs: GoogleDriveFS) : GDriveFolder(fs, null, "root", "") {
     override val name: String
         get() = ""
     override val parent: GDriveFolder
