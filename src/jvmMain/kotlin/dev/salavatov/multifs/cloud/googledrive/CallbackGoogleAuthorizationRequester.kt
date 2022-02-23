@@ -101,7 +101,7 @@ class CallbackGoogleAuthorizationRequester(private val appCredentials: GoogleApp
                 append("client_secret", appCredentials.secret)
                 append("grant_type", "refresh_token")
             })
-        if (response.status.value == 400 && response.bodyAsText().contains("expired")) {
+        if (response.status.value == 400) { // TODO: && response.bodyAsText().contains("expired") doesn't work, can also contain "invalid_grant"
             return requestAuthorization()
         }
         if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to refresh tokens: ${response.status}")
