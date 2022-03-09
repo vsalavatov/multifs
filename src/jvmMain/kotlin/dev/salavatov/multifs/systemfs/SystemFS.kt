@@ -13,15 +13,17 @@ class SystemFS : VFS<SystemFile, SystemFolder> {
     override val root: SystemRoot
         get() = SystemRoot
 
-    override suspend fun move(file: SystemFile, newParent: SystemFolder, overwrite: Boolean): SystemFile {
-        TODO("Not yet implemented")
+    override suspend fun move(file: SystemFile, newParent: SystemFolder, newName: PathPart?, overwrite: Boolean): SystemFile {
+        val newNioPath = file.nioPath.moveTo(newParent.nioPath / (newName ?: file.name), overwrite=overwrite)
+        return SystemFile(newNioPath)
     }
 
-    override suspend fun copy(file: SystemFile, folder: SystemFolder, overwrite: Boolean): SystemFile {
-        TODO("Not yet implemented")
+    override suspend fun copy(file: SystemFile, folder: SystemFolder, newName: PathPart?, overwrite: Boolean): SystemFile {
+        val newNioPath = file.nioPath.copyTo(folder.nioPath / (newName ?: file.name), overwrite=overwrite)
+        return SystemFile(newNioPath)
     }
 
-    override fun AbsolutePath.represent(): String = SystemFS.Companion.run { represent() }
+    override fun representPath(path: AbsolutePath): String = path.represent()
 }
 
 sealed class SystemNode(internal val nioPath: Path) : VFSNode {

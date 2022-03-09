@@ -5,14 +5,14 @@ import dev.salavatov.multifs.vfs.*
 class GoogleDriveFS(internal val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFolder> {
     override val root = GDriveRoot(this)
 
-    override suspend fun move(file: GDriveFile, newParent: GDriveFolder, overwrite: Boolean): GDriveFile {
+    override suspend fun move(file: GDriveFile, newParent: GDriveFolder, newName: PathPart?, overwrite: Boolean): GDriveFile {
         TODO("Not yet implemented")
     }
-    override suspend fun copy(file: GDriveFile, folder: GDriveFolder, overwrite: Boolean): GDriveFile {
+    override suspend fun copy(file: GDriveFile, newParent: GDriveFolder, newName: PathPart?, overwrite: Boolean): GDriveFile {
         TODO("Not yet implemented")
     }
 
-    override fun AbsolutePath.represent(): String = this.joinToString("/", "/") // no native representation ?
+    override fun representPath(path: AbsolutePath): String = path.joinToString("/", "/") // no native representation ?
 }
 
 sealed class GDriveNode(
