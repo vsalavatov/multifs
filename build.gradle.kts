@@ -1,6 +1,6 @@
 plugins {
-    kotlin("multiplatform") version "1.5.31"
-    kotlin("plugin.serialization") version "1.5.31"
+    kotlin("multiplatform") version "1.6.10"
+    kotlin("plugin.serialization") version "1.6.10"
     id("maven-publish")
 }
 
@@ -23,14 +23,15 @@ kotlin {
         compilations.all {
             kotlinOptions.jvmTarget = "1.8"
             kotlinOptions.freeCompilerArgs += listOf(
-                "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi"
+                "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi",
+                "-opt-in=kotlin.RequiresOptIn"
             )
         }
         testRuns["test"].executionTask.configure {
             useJUnit()
         }
     }
-    js(LEGACY) {
+    js(IR) {
         browser {
             commonWebpackConfig {
                 cssSupport.enabled = true
