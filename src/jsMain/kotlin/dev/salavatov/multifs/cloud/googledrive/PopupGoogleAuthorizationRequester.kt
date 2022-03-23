@@ -3,6 +3,7 @@ package dev.salavatov.multifs.cloud.googledrive
 import kotlinx.browser.window
 import kotlinx.coroutines.await
 import kotlin.js.Promise
+import kotlin.js.json
 
 /**
  * add this to the web app's head section
@@ -25,7 +26,9 @@ class PopupGoogleAuthorizationRequester(private val appCredentials: GoogleAppCre
     private var googleUser: dynamic = null
 
     override suspend fun requestAuthorization(): GoogleAuthTokens {
-        googleUser = auth.signIn().unsafeCast<Promise<dynamic>>().await()
+        googleUser = auth.signIn(
+            json("scope" to "https://www.googleapis.com/auth/drive")
+        ).unsafeCast<Promise<dynamic>>().await()
         val authData = googleUser.getAuthResponse(true)
         return GoogleAuthTokens(authData.access_token as String, authData.expires_in as Int, "")
     }
