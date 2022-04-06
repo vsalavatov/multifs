@@ -18,7 +18,7 @@ import java.net.URI
 import java.net.URL
 import java.util.*
 
-class CallbackGoogleAuthorizationRequester(private val appCredentials: GoogleAppCredentials) : GoogleAuthorizationRequester {
+class HttpCallbackGoogleAuthorizationRequester(private val appCredentials: GoogleAppCredentials) : GoogleAuthorizationRequester {
     override suspend fun requestAuthorization(): GoogleAuthTokens {
         val tokensFuture = CompletableDeferred<GoogleAuthTokens>()
 
