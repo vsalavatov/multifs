@@ -2,6 +2,7 @@ plugins {
     kotlin("multiplatform") version "1.6.10"
     kotlin("plugin.serialization") version "1.6.10"
     id("maven-publish")
+    id("com.android.library") version "7.0.0"
 }
 
 group = "dev.salavatov"
@@ -9,6 +10,7 @@ version = "0.0.1"
 
 repositories {
     mavenCentral()
+    google()
 
     maven {
         url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") // for ktor 2.0.0-eap
@@ -30,6 +32,9 @@ kotlin {
         testRuns["test"].executionTask.configure {
             useJUnit()
         }
+    }
+    android() {
+        publishAllLibraryVariants()
     }
     js(IR) {
         browser {
@@ -76,6 +81,9 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.1")
             }
         }
+        val androidMain by getting {
+
+        }
         val jsMain by getting {
             dependencies {
                 implementation("io.ktor:ktor-client-js:$ktorVersion")
@@ -91,6 +99,23 @@ kotlin {
     }
 }
 
+android {
+    sourceSets {
+        named("main") {
+            val androidMain = "src/androidMain"
+            manifest.srcFile("$androidMain/AndroidManifest.xml")
+            res.setSrcDirs(listOf("$androidMain/res", "src/commonMain/resources/"))
+            java.setSrcDirs(listOf("$androidMain/java"))
+            kotlin.setSrcDirs(listOf("$androidMain/kotlin"))
+        }
+    }
+    compileSdkVersion(29) // TODO
+    defaultConfig {
+        minSdkVersion(21)
+        targetSdkVersion(29)
+    }
+}
+
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
     testLogging {
@@ -100,3 +125,22 @@ tasks.named<Test>("jvmTest") {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }
+
+
+// some strange non-existent module called "androidAndroidTestRelease" appears after gradle configuration
+// here is some fix from the internet (https://discuss.kotlinlang.org/t/disabling-androidandroidtestrelease-source-set-in-gradle-kotlin-dsl-script/21448)
+subprojects {
+    afterEvaluate {
+        project.extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()?.let { ext ->
+            ext.sourceSets.removeAll { sourceSet ->
+                setOf(
+                    "androidAndroidTestRelease",
+                    "androidTestFixtures",
+                    "androidTestFixturesDebug",
+                    "androidTestFixturesRelease",
+                ).contains(sourceSet.name)
+            }
+        }
+    }
+}
+
