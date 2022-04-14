@@ -82,7 +82,11 @@ kotlin {
             }
         }
         val androidMain by getting {
-
+            dependencies {
+                implementation("androidx.activity:activity-ktx:1.4.0")
+                implementation("com.google.android.gms:play-services-auth:20.1.0")
+                implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
+            }
         }
         val jsMain by getting {
             dependencies {
@@ -129,18 +133,14 @@ tasks.named<Test>("jvmTest") {
 
 // some strange non-existent module called "androidAndroidTestRelease" appears after gradle configuration
 // here is some fix from the internet (https://discuss.kotlinlang.org/t/disabling-androidandroidtestrelease-source-set-in-gradle-kotlin-dsl-script/21448)
-subprojects {
-    afterEvaluate {
-        project.extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()?.let { ext ->
-            ext.sourceSets.removeAll { sourceSet ->
-                setOf(
-                    "androidAndroidTestRelease",
-                    "androidTestFixtures",
-                    "androidTestFixturesDebug",
-                    "androidTestFixturesRelease",
-                ).contains(sourceSet.name)
-            }
-        }
+project.extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()?.let { ext ->
+    ext.sourceSets.removeAll { sourceSet ->
+        setOf(
+            "androidAndroidTestRelease",
+            "androidTestFixtures",
+            "androidTestFixturesDebug",
+            "androidTestFixturesRelease",
+        ).contains(sourceSet.name)
     }
 }
 
