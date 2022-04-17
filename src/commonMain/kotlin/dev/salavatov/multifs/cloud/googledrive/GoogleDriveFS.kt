@@ -72,7 +72,7 @@ open class GDriveFolder(
     override suspend fun div(path: PathPart): GDriveFolder { // TODO: optimize
         val entries = listFolder()
         return entries.find { it.name == path && it is GDriveFolder } as? GDriveFolder
-            ?: throw GoogleDriveDirectoryNotFoundException("$path wasn't found in $absolutePath")
+            ?: throw GoogleDriveFolderNotFoundException("$path wasn't found in $absolutePath")
     }
 
     override suspend fun rem(path: PathPart): GDriveFile { // TODO: optimize
@@ -96,7 +96,7 @@ class GDriveRoot(fs: GoogleDriveFS) : GDriveFolder(fs, null, "root", "") {
 
 class GDriveFile(
     fs: GoogleDriveFS,
-    override val parent: Folder,
+    override val parent: GDriveFolder,
     id: String,
     name: String,
     val size: Long,
