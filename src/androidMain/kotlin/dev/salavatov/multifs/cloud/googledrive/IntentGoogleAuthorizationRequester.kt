@@ -29,20 +29,13 @@ class IntentGoogleAuthorizationRequester(
 
     override suspend fun requestAuthorization(): GoogleAuthTokens {
         val result = triggerSignIn(googleSignInClient.signInIntent)
-//        Log.e("LOGLOG", "${result.data!!.extras!!.keySet().joinToString(" ")}")
-//        Log.e("LOGLOG", "${result.data!!.extras!!["googleSignInStatus"]}")
-//        Log.e("LOGLOG", "${result.data!!.extras!!["googleSignInAccount"]}")
         if (result.resultCode != Activity.RESULT_OK) {
             throw RuntimeException("activity result code: ${result.resultCode}; googleSignInStatus: ${result.data!!.extras!!["googleSignInStatus"]}")
         }
         val intent = result.data!!
-        val task: Task<GoogleSignInAccount> =
-            GoogleSignIn.getSignedInAccountFromIntent(intent)
+        val task: Task<GoogleSignInAccount> = GoogleSignIn.getSignedInAccountFromIntent(intent)
         assert(task.isComplete)
         val serverAuthCode = task.result.serverAuthCode!!
-        // "urn:ietf:wg:oauth:2.0:oob"
-        Log.e("LOGLOG", serverAuthCode)
-        HttpClient().request("https://oauth2.googleapis.com/token")
         return exchangeAuthCodeOnTokens("urn:ietf:wg:oauth:2.0:oob", serverAuthCode)
     }
 
@@ -58,19 +51,29 @@ class IntentGoogleAuthorizationRequester(
             })
         if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to get tokens: ${response.status}")
         val rawData = response.bodyAsText()
-        Log.e("LOGLOG", rawData)
         return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
     }
 
     override suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens {
-        TODO("Not yet implemented")
+        val tokenClient = HttpClient() { expectSuccess = false }
+        val response =
+            tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
+                append("refresh_token", expired.refreshToken!!)
+                append("client_id", appCredentials.clientId)
+                append("client_secret", appCredentials.secret)
+                append("grant_type", "refresh_token")
+            })
+        if (response.status.value == 400) { // TODO: && response.bodyAsText().contains("expired") doesn't work, can also contain "invalid_grant"
+            return requestAuthorization()
+        }
+        if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to refresh tokens: ${response.status}")
+        val rawData = response.bodyAsText()
+        return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
     }
 
     private fun getGoogleSignInClient(): GoogleSignInClient {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestServerAuthCode(appCredentials.clientId, true)
-            .requestScopes(Scope(DRIVE_SCOPE))
-            .build()
+            .requestServerAuthCode(appCredentials.clientId, true).requestScopes(Scope(DRIVE_SCOPE)).build()
         return GoogleSignIn.getClient(context, gso)
     }
 
