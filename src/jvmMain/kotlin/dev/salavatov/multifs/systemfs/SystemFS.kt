@@ -5,28 +5,38 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
 
-class SystemFS : VFS<SystemFile, SystemFolder> {
+open class SystemFS : VFS<SystemFile, SystemFolder> {
     companion object {
         fun AbsolutePath.represent(): String = joinToString("/", "/")
     }
 
     override val root: SystemRoot
-        get() = SystemRoot
+        get() = SystemRoot()
 
-    override suspend fun move(file: SystemFile, newParent: SystemFolder, newName: PathPart?, overwrite: Boolean): SystemFile {
-        val newNioPath = file.nioPath.moveTo(newParent.nioPath / (newName ?: file.name), overwrite=overwrite)
+    override suspend fun move(
+        file: SystemFile,
+        newParent: SystemFolder,
+        newName: PathPart?,
+        overwrite: Boolean
+    ): SystemFile {
+        val newNioPath = file.nioPath.moveTo(newParent.nioPath / (newName ?: file.name), overwrite = overwrite)
         return SystemFile(newNioPath)
     }
 
-    override suspend fun copy(file: SystemFile, folder: SystemFolder, newName: PathPart?, overwrite: Boolean): SystemFile {
-        val newNioPath = file.nioPath.copyTo(folder.nioPath / (newName ?: file.name), overwrite=overwrite)
+    override suspend fun copy(
+        file: SystemFile,
+        newParent: SystemFolder,
+        newName: PathPart?,
+        overwrite: Boolean
+    ): SystemFile {
+        val newNioPath = file.nioPath.copyTo(newParent.nioPath / (newName ?: file.name), overwrite = overwrite)
         return SystemFile(newNioPath)
     }
 
     override fun representPath(path: AbsolutePath): String = path.represent()
 }
 
-sealed class SystemNode(internal val nioPath: Path) : VFSNode {
+sealed class SystemNode(val nioPath: Path) : VFSNode {
     override val name: String
         get() = nioPath.fileName.name
     override val parent: Folder
@@ -37,7 +47,7 @@ sealed class SystemNode(internal val nioPath: Path) : VFSNode {
     override fun toString(): String = SystemFS.run { absolutePath.represent() }
 }
 
-open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder { // TODO: shouldn't be open, I guess. proxy?
+open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
     override suspend fun listFolder(): List<SystemNode> =
         nioPath.listDirectoryEntries().filter { it.isDirectory() || it.isRegularFile() }.map {
             if (it.isDirectory()) {
@@ -82,7 +92,7 @@ open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder { // TODO: 
     }
 }
 
-object SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root) {
+open class SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root) {
     override val name: String
         get() = ""
     override val parent: Folder
@@ -91,7 +101,7 @@ object SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root) {
         get() = emptyList()
 }
 
-class SystemFile(nioPath: Path) : SystemNode(nioPath), File {
+open class SystemFile(nioPath: Path) : SystemNode(nioPath), File {
     override suspend fun remove() {
         nioPath.deleteExisting()
     }

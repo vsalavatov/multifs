@@ -11,24 +11,24 @@ import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 
 
-class GoogleDriveAPI(
-    private val authenticator: GoogleAuthorizationRequester
+open class GoogleDriveAPI(
+    protected val authorizer: GoogleAuthorizationRequester
 ) {
-    private val apiClient = HttpClient {
+    protected val apiClient = HttpClient {
         expectSuccess = false
         install(Auth) {
             lateinit var tokenInfo: GoogleAuthTokens
 
             bearer {
                 loadTokens {
-                    tokenInfo = authenticator.requestAuthorization()
+                    tokenInfo = authorizer.requestAuthorization()
                     BearerTokens(
                         accessToken = tokenInfo.accessToken, refreshToken = tokenInfo.refreshToken!!
                     )
                 }
 
                 refreshTokens {
-                    val refreshTokenInfo = authenticator.refreshAuthorization(tokenInfo)
+                    val refreshTokenInfo = authorizer.refreshAuthorization(tokenInfo)
                     tokenInfo = GoogleAuthTokens(
                         refreshTokenInfo.accessToken,
                         refreshTokenInfo.expiresIn,
@@ -41,7 +41,7 @@ class GoogleDriveAPI(
             }
         }
     }
-    private val jsonParser = Json { ignoreUnknownKeys = true }
+    protected val jsonParser = Json { ignoreUnknownKeys = true }
 
     suspend fun list(folderId: String): List<GDriveNativeNodeData> {
         val endpoint = "https://www.googleapis.com/drive/v3/files"
@@ -172,5 +172,5 @@ class GoogleDriveAPI(
         }
     }
 
-    private val FOLDER_MIMETYPE = "application/vnd.google-apps.folder"
+    protected val FOLDER_MIMETYPE = "application/vnd.google-apps.folder"
 }

@@ -3,7 +3,7 @@ package dev.salavatov.multifs.sqlite
 import android.content.ContentValues
 import dev.salavatov.multifs.vfs.*
 
-class SqliteFS(private val dbHelper: SqliteFSDatabaseHelper) : VFS<SqliteFSFile, SqliteFSFolder> {
+open class SqliteFS(protected val dbHelper: SqliteFSDatabaseHelper) : VFS<SqliteFSFile, SqliteFSFolder> {
     override val root: SqliteFSFolder
         get() = SqliteFSRoot(dbHelper)
 
@@ -82,7 +82,7 @@ sealed class SqliteFSNode(
         }
 }
 
-open class SqliteFSFolder internal constructor(
+open class SqliteFSFolder(
     dbHelper: SqliteFSDatabaseHelper,
     id: Int,
     name: String,
@@ -227,7 +227,7 @@ open class SqliteFSFolder internal constructor(
 
 }
 
-class SqliteFSRoot(dbHelper: SqliteFSDatabaseHelper) : SqliteFSFolder(dbHelper, 0, "", null) {
+open class SqliteFSRoot(dbHelper: SqliteFSDatabaseHelper) : SqliteFSFolder(dbHelper, 0, "", null) {
     override val name: String
         get() = ""
     override val parent: SqliteFSFolder
@@ -236,7 +236,7 @@ class SqliteFSRoot(dbHelper: SqliteFSDatabaseHelper) : SqliteFSFolder(dbHelper, 
         get() = emptyList()
 }
 
-class SqliteFSFile(
+open class SqliteFSFile(
     dbHelper: SqliteFSDatabaseHelper,
     id: Int,
     name: String,

@@ -2,8 +2,8 @@ package dev.salavatov.multifs.cloud.googledrive
 
 import dev.salavatov.multifs.vfs.*
 
-class GoogleDriveFS(internal val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFolder> {
-    override val root = GDriveRoot(this)
+open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFolder> {
+    override val root = GDriveRoot(api)
 
     override suspend fun move(file: GDriveFile, newParent: GDriveFolder, newName: PathPart?, overwrite: Boolean): GDriveFile {
         TODO("Not yet implemented")
@@ -16,7 +16,7 @@ class GoogleDriveFS(internal val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFo
 }
 
 sealed class GDriveNode(
-    internal val fs: GoogleDriveFS,
+    protected val api: GoogleDriveAPI,
     val id: String,
     override val name: String
 ) : VFSNode {
@@ -29,43 +29,43 @@ sealed class GDriveNode(
 }
 
 open class GDriveFolder(
-    fs: GoogleDriveFS,
+    api: GoogleDriveAPI,
     private val parent_: GDriveFolder?,
     id: String,
     name: String
-) : GDriveNode(fs, id, name), Folder {
+) : GDriveNode(api, id, name), Folder {
 
     private fun GDriveNativeNodeData.convert(): GDriveNode {
         val folder = this@GDriveFolder
         return when (this) {
-            is GDriveNativeFileData -> GDriveFile(fs, folder, this.id, this.name, this.size, this.mimeType)
-            is GDriveNativeFolderData -> GDriveFolder(fs, folder, this.id, this.name)
+            is GDriveNativeFileData -> GDriveFile(api, folder, this.id, this.name, this.size, this.mimeType)
+            is GDriveNativeFolderData -> GDriveFolder(api, folder, this.id, this.name)
         }
     }
 
     override suspend fun listFolder(): List<GDriveNode> {
-        val rawEntries = fs.api.list(id)
+        val rawEntries = api.list(id)
         return rawEntries.map { it.convert() }
     }
 
     override suspend fun createFolder(name: PathPart): GDriveFolder {
-        val rawEntry = fs.api.createFolder(name, id)
+        val rawEntry = api.createFolder(name, id)
         return rawEntry.convert() as GDriveFolder
     }
 
     override suspend fun remove(recursively: Boolean) {
         if (recursively) {
-            return fs.api.delete(id)
+            return api.delete(id)
         }
         val children = listFolder()
         if (children.isEmpty()) {
-            return fs.api.delete(id)
+            return api.delete(id)
         }
         throw GoogleDriveFSException("cannot delete folder $id non-recursively as it contains children")
     }
 
     override suspend fun createFile(name: PathPart): GDriveFile {
-        val rawEntry = fs.api.createFile(name, id)
+        val rawEntry = api.createFile(name, id)
         return rawEntry.convert() as GDriveFile
     }
 
@@ -85,7 +85,7 @@ open class GDriveFolder(
         get() = parent_ ?: this
 }
 
-class GDriveRoot(fs: GoogleDriveFS) : GDriveFolder(fs, null, "root", "") {
+open class GDriveRoot(api: GoogleDriveAPI) : GDriveFolder(api, null, "root", "") {
     override val name: String
         get() = ""
     override val parent: GDriveFolder
@@ -94,23 +94,23 @@ class GDriveRoot(fs: GoogleDriveFS) : GDriveFolder(fs, null, "root", "") {
         get() = emptyList()
 }
 
-class GDriveFile(
-    fs: GoogleDriveFS,
+open class GDriveFile(
+    api: GoogleDriveAPI,
     override val parent: GDriveFolder,
     id: String,
     name: String,
     val size: Long,
     val mimeType: String
-) : GDriveNode(fs, id, name), File {
+) : GDriveNode(api, id, name), File {
     override suspend fun remove() {
-        return fs.api.delete(id)
+        return api.delete(id)
     }
 
     override suspend fun read(): ByteArray {
-        return fs.api.download(id)
+        return api.download(id)
     }
 
     override suspend fun write(data: ByteArray) {
-        return fs.api.upload(id, data)
+        return api.upload(id, data)
     }
 }

@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed class GDriveNativeNodeData;
+sealed class GDriveNativeNodeData
 
 @Serializable
 data class GDriveNativeFolderData(
