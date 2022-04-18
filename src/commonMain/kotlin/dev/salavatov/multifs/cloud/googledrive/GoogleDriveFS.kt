@@ -5,11 +5,62 @@ import dev.salavatov.multifs.vfs.*
 open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFolder> {
     override val root = GDriveRoot(api)
 
-    override suspend fun move(file: GDriveFile, newParent: GDriveFolder, newName: PathPart?, overwrite: Boolean): GDriveFile {
-        TODO("Not yet implemented")
+    override suspend fun copy(
+        file: GDriveFile,
+        newParent: GDriveFolder,
+        newName: PathPart?,
+        overwrite: Boolean
+    ): GDriveFile {
+        // TODO: optimize
+        val targetName = newName ?: file.name
+        if (newParent == file.parent && targetName == file.name) {
+            // no op
+            return file
+        }
+        return try {
+            val targetFile = newParent % targetName
+            // targetFile exists
+            if (overwrite) {
+                targetFile.write(file.read())
+                targetFile
+            } else {
+                throw GoogleDriveFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+            }
+        } catch (_: GoogleDriveFSFileNotFoundException) {
+            val targetFile = newParent.createFile(targetName)
+            targetFile.write(file.read())
+            targetFile
+        }
     }
-    override suspend fun copy(file: GDriveFile, newParent: GDriveFolder, newName: PathPart?, overwrite: Boolean): GDriveFile {
-        TODO("Not yet implemented")
+
+    override suspend fun move(
+        file: GDriveFile,
+        newParent: GDriveFolder,
+        newName: PathPart?,
+        overwrite: Boolean
+    ): GDriveFile {
+        // TODO: optimize
+        val targetName = newName ?: file.name
+        if (newParent == file.parent && targetName == file.name) {
+            // no op
+            return file
+        }
+        return try {
+            val targetFile = newParent % targetName
+            // targetFile exists
+            if (overwrite) {
+                targetFile.write(file.read())
+                file.remove()
+                targetFile
+            } else {
+                throw GoogleDriveFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+            }
+        } catch (_: GoogleDriveFSFileNotFoundException) {
+            val targetFile = newParent.createFile(targetName)
+            targetFile.write(file.read())
+            file.remove()
+            targetFile
+        }
     }
 
     override fun representPath(path: AbsolutePath): String = path.joinToString("/", "/") // no native representation ?
@@ -72,13 +123,13 @@ open class GDriveFolder(
     override suspend fun div(path: PathPart): GDriveFolder { // TODO: optimize
         val entries = listFolder()
         return entries.find { it.name == path && it is GDriveFolder } as? GDriveFolder
-            ?: throw GoogleDriveFolderNotFoundException("$path wasn't found in $absolutePath")
+            ?: throw GoogleDriveFSFolderNotFoundException("folder $path not found at $absolutePath")
     }
 
     override suspend fun rem(path: PathPart): GDriveFile { // TODO: optimize
         val entries = listFolder()
         return entries.find { it.name == path && it is GDriveFile } as? GDriveFile
-            ?: throw GoogleDriveFileNotFoundException("$path wasn't found in $absolutePath")
+            ?: throw GoogleDriveFSFileNotFoundException("file $path not found at $absolutePath")
     }
 
     override val parent: GDriveFolder

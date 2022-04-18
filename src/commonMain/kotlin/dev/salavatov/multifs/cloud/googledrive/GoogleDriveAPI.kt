@@ -10,6 +10,7 @@ import io.ktor.http.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 
+open class GoogleDriveAPIException(message: String? = null, cause: Throwable? = null) : Exception(message, cause)
 
 open class GoogleDriveAPI(
     protected val authorizer: GoogleAuthorizationRequester
@@ -31,7 +32,6 @@ open class GoogleDriveAPI(
                     val refreshTokenInfo = authorizer.refreshAuthorization(tokenInfo)
                     tokenInfo = GoogleAuthTokens(
                         refreshTokenInfo.accessToken,
-                        refreshTokenInfo.expiresIn,
                         refreshTokenInfo.refreshToken ?: tokenInfo.refreshToken
                     )
                     BearerTokens(
@@ -58,7 +58,7 @@ open class GoogleDriveAPI(
                 parameter("pageSize", pageSize)
                 if (pageToken != null) parameter("pageToken", pageToken)
             }
-            if (response.status.value != 200) throw GoogleDriveAPIException("Failed list request: ${response.status}")
+            if (response.status.value != 200) throw GoogleDriveAPIException("failed list request: ${response.status}")
 
             val data = Json.parseToJsonElement(response.bodyAsText()).jsonObject
 
