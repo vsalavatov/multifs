@@ -27,12 +27,3 @@ interface Folder : VFSNode {
 
 val Folder.isRoot: Boolean
     get() = this == this.parent
-
-suspend inline fun <reified T: VFSNode> Folder.find(path: PathPart): T? {
-    listFolder().forEach {
-        if (it.name == path && it is T) {
-            return it
-        }
-    }
-    return null
-}
