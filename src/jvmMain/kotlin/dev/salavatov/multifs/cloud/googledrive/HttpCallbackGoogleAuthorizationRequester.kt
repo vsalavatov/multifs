@@ -1,8 +1,6 @@
 package dev.salavatov.multifs.cloud.googledrive
 
-import io.ktor.client.*
-import io.ktor.client.request.forms.*
-import io.ktor.client.statement.*
+import dev.salavatov.multifs.cloud.googledrive.GoogleAuthorizationRequester.Companion.exchangeAuthCodeOnTokens
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
@@ -11,14 +9,25 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.network.*
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 import java.awt.Desktop
 import java.net.URI
 import java.net.URL
 import java.util.*
 
-class HttpCallbackGoogleAuthorizationRequester(private val appCredentials: GoogleAppCredentials) : GoogleAuthorizationRequester {
+const val DEFAULT_SUCCESS_PAGE_HTML = """
+<html>
+<body>
+    <h2 style="text-align:center">
+    Success!<br>You may now close this page and return to the application.
+    </h2>
+</body>
+</html>"""
+
+class HttpCallbackGoogleAuthorizationRequester(
+    private val appCredentials: GoogleAppCredentials,
+    val scope: GoogleDriveAPI.Companion.DriveScope,
+    val successPageHtml: String = DEFAULT_SUCCESS_PAGE_HTML
+) : GoogleAuthorizationRequester {
     override suspend fun requestAuthorization(): GoogleAuthTokens {
         val tokensFuture = CompletableDeferred<GoogleAuthTokens>()
 
@@ -28,17 +37,8 @@ class HttpCallbackGoogleAuthorizationRequester(private val appCredentials: Googl
                 get("/") {
                     val code = context.request.queryParameters["code"]
                         ?: throw GoogleDriveAPIException("authenticator: unexpected callback result: params: ${context.request.queryParameters}")
-                    tokensFuture.complete(exchangeAuthCodeOnTokens(baseRedirectUri, code))
-                    call.respondText(
-                        """
-                        <html>
-                        <body>
-                            <h2 style="text-align:center">
-                            Success!<br>You may now close this page and return to the application.
-                            </h2>
-                        </body>
-                        </html>""".trimIndent(), ContentType.Text.Html
-                    )
+                    tokensFuture.complete(exchangeAuthCodeOnTokens(appCredentials, baseRedirectUri, code))
+                    call.respondText(successPageHtml, ContentType.Text.Html)
                 }
             }
         }.start(wait = false)
@@ -52,6 +52,9 @@ class HttpCallbackGoogleAuthorizationRequester(private val appCredentials: Googl
         callbackServer.stop(100, 200)
         return tokens
     }
+
+    override suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens =
+        GoogleAuthorizationRequester.tryRefreshAuthorization(appCredentials, expired) { requestAuthorization() }
 
     // https://stackoverflow.com/a/68426773
     // TODO: there should be a better way to handle this
@@ -71,41 +74,9 @@ class HttpCallbackGoogleAuthorizationRequester(private val appCredentials: Googl
             "client_id=${appCredentials.clientId}",
             "redirect_uri=$redirectUri",
             "response_type=code",
-            "scope=https://www.googleapis.com/auth/drive",
+            "scope=${scope.value}",
             "access_type=offline",
             // "state=${state}"
         ).joinToString("&")
     ).toURI()
-
-    private suspend fun exchangeAuthCodeOnTokens(redirectUri: String, code: String): GoogleAuthTokens {
-        val tokenClient = HttpClient() { expectSuccess = false }
-        val response =
-            tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
-                append("code", code)
-                append("client_id", appCredentials.clientId)
-                append("client_secret", appCredentials.secret)
-                append("grant_type", "authorization_code")
-                append("redirect_uri", redirectUri)
-            })
-        if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to get tokens: ${response.status}")
-        val rawData = response.bodyAsText()
-        return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
-    }
-
-    override suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens {
-        val tokenClient = HttpClient() { expectSuccess = false }
-        val response =
-            tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
-                append("refresh_token", expired.refreshToken!!)
-                append("client_id", appCredentials.clientId)
-                append("client_secret", appCredentials.secret)
-                append("grant_type", "refresh_token")
-            })
-        if (response.status.value == 400) { // TODO: && response.bodyAsText().contains("expired") doesn't work, can also contain "invalid_grant"
-            return requestAuthorization()
-        }
-        if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to refresh tokens: ${response.status}")
-        val rawData = response.bodyAsText()
-        return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
-    }
 }

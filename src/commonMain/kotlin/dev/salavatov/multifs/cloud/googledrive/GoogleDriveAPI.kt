@@ -173,4 +173,11 @@ open class GoogleDriveAPI(
     }
 
     protected val FOLDER_MIMETYPE = "application/vnd.google-apps.folder"
+
+    companion object {
+        enum class DriveScope(val value: String) {
+            General("https://www.googleapis.com/auth/drive"),
+            AppSpecific("https://www.googleapis.com/auth/drive.appdata")
+        }
+    }
 }

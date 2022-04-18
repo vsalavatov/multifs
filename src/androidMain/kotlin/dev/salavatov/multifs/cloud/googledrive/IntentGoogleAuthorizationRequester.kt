@@ -11,16 +11,13 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
-import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
+import dev.salavatov.multifs.cloud.googledrive.GoogleAuthorizationRequester.Companion.REDIRECT_URI_PROGRAMMATIC_EXTRACTION
+import dev.salavatov.multifs.cloud.googledrive.GoogleAuthorizationRequester.Companion.exchangeAuthCodeOnTokens
+import dev.salavatov.multifs.cloud.googledrive.GoogleAuthorizationRequester.Companion.tryRefreshAuthorization
 
 class IntentGoogleAuthorizationRequester(
     private val appCredentials: GoogleAppCredentials,
+    val scope: GoogleDriveAPI.Companion.DriveScope,
     private val context: Context,
     private val triggerSignIn: suspend (Intent) -> ActivityResult,
 ) : GoogleAuthorizationRequester {
@@ -34,51 +31,20 @@ class IntentGoogleAuthorizationRequester(
         }
         val intent = result.data!!
         val task: Task<GoogleSignInAccount> = GoogleSignIn.getSignedInAccountFromIntent(intent)
-        assert(task.isComplete)
+        if (!task.isComplete)
+            throw GoogleDriveAPIException("sign in flow didn't complete")
         val serverAuthCode = task.result.serverAuthCode!!
-        return exchangeAuthCodeOnTokens("urn:ietf:wg:oauth:2.0:oob", serverAuthCode)
+        return exchangeAuthCodeOnTokens(appCredentials, REDIRECT_URI_PROGRAMMATIC_EXTRACTION, serverAuthCode)
     }
 
-    private suspend fun exchangeAuthCodeOnTokens(redirectUri: String, code: String): GoogleAuthTokens {
-        val tokenClient = HttpClient() { expectSuccess = false }
-        val response =
-            tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
-                append("code", code)
-                append("client_id", appCredentials.clientId)
-                append("client_secret", appCredentials.secret)
-                append("grant_type", "authorization_code")
-                append("redirect_uri", redirectUri)
-            })
-        if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to get tokens: ${response.status}")
-        val rawData = response.bodyAsText()
-        return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
-    }
-
-    override suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens {
-        val tokenClient = HttpClient() { expectSuccess = false }
-        val response =
-            tokenClient.submitForm(url = "https://oauth2.googleapis.com/token", formParameters = Parameters.build {
-                append("refresh_token", expired.refreshToken!!)
-                append("client_id", appCredentials.clientId)
-                append("client_secret", appCredentials.secret)
-                append("grant_type", "refresh_token")
-            })
-        if (response.status.value == 400) { // TODO: && response.bodyAsText().contains("expired") doesn't work, can also contain "invalid_grant"
-            return requestAuthorization()
-        }
-        if (response.status.value != 200) throw GoogleDriveAPIException("authenticator: failed to refresh tokens: ${response.status}")
-        val rawData = response.bodyAsText()
-        return Json { ignoreUnknownKeys = true }.decodeFromString(rawData)
-    }
+    override suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens =
+        tryRefreshAuthorization(appCredentials, expired) { requestAuthorization() }
 
     private fun getGoogleSignInClient(): GoogleSignInClient {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestServerAuthCode(appCredentials.clientId, true).requestScopes(Scope(DRIVE_SCOPE)).build()
+            .requestServerAuthCode(appCredentials.clientId, true)
+            .requestScopes(Scope(scope.value))
+            .build()
         return GoogleSignIn.getClient(context, gso)
-    }
-
-    companion object {
-        // TODO: extract these
-        const val DRIVE_SCOPE = "https://www.googleapis.com/auth/drive"
     }
 }

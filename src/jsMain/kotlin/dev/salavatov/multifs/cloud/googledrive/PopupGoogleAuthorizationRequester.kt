@@ -20,22 +20,31 @@ import kotlin.js.json
 </script>
 ```
  */
-class PopupGoogleAuthorizationRequester(private val appCredentials: GoogleAppCredentials) : GoogleAuthorizationRequester {
+class PopupGoogleAuthorizationRequester(
+//    private val appCredentials: GoogleAppCredentials
+    val scope: GoogleDriveAPI.Companion.DriveScope
+) : GoogleAuthorizationRequester {
     private val gapi = window.asDynamic().gapi
     private val auth = gapi.auth2.getAuthInstance()
     private var googleUser: dynamic = null
 
     override suspend fun requestAuthorization(): GoogleAuthTokens {
         googleUser = auth.signIn(
-            json("scope" to "https://www.googleapis.com/auth/drive")
+            json("scope" to scope.value)
         ).unsafeCast<Promise<dynamic>>().await()
         val authData = googleUser.getAuthResponse(true)
-        return GoogleAuthTokens(authData.access_token as String, authData.expires_in as Int, "")
+        return GoogleAuthTokens(
+            authData.access_token as String,
+            "" // refresh token is stored inside google platform framework
+        )
     }
 
     override suspend fun refreshAuthorization(expired: GoogleAuthTokens): GoogleAuthTokens {
         if (googleUser == null) return requestAuthorization()
         val authData = googleUser.reloadAuthResponse().unsafeCast<Promise<dynamic>>().await()
-        return GoogleAuthTokens(authData.access_token as String, authData.expires_in as Int, "")
+        return GoogleAuthTokens(
+            authData.access_token as String,
+            "" // refresh token is stored inside google platform framework
+        )
     }
 }
