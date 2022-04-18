@@ -13,7 +13,25 @@ class SqliteFS(private val dbHelper: SqliteFSDatabaseHelper) : VFS<SqliteFSFile,
         newName: PathPart?,
         overwrite: Boolean
     ): SqliteFSFile {
-        TODO("Not yet implemented")
+        val targetName = newName ?: file.name
+        if (newParent == file.parent && targetName == file.name) {
+            // no op
+            return file
+        }
+        return try {
+            val targetFile = newParent % targetName
+            // targetFile exists
+            if (overwrite) {
+                targetFile.write(file.read())
+                targetFile
+            } else {
+                throw SqliteFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+            }
+        } catch (_: SqliteFSFileNotFoundException) {
+            val targetFile = newParent.createFile(targetName)
+            targetFile.write(file.read())
+            targetFile
+        }
     }
 
     override suspend fun move(
@@ -22,7 +40,27 @@ class SqliteFS(private val dbHelper: SqliteFSDatabaseHelper) : VFS<SqliteFSFile,
         newName: PathPart?,
         overwrite: Boolean
     ): SqliteFSFile {
-        TODO("Not yet implemented")
+        val targetName = newName ?: file.name
+        if (newParent == file.parent && targetName == file.name) {
+            // no op
+            return file
+        }
+        return try {
+            val targetFile = newParent % targetName
+            // targetFile exists
+            if (overwrite) {
+                targetFile.write(file.read())
+                file.remove()
+                targetFile
+            } else {
+                throw SqliteFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+            }
+        } catch (_: SqliteFSFileNotFoundException) {
+            val targetFile = newParent.createFile(targetName)
+            targetFile.write(file.read())
+            file.remove()
+            targetFile
+        }
     }
 
     override fun representPath(path: AbsolutePath): String {
@@ -147,7 +185,7 @@ open class SqliteFSFolder internal constructor(
             throw SqliteFSFolderNotFoundException("couldn't remove folder $absolutePath")
     }
 
-    override suspend fun div(path: PathPart): Folder {
+    override suspend fun div(path: PathPart): SqliteFSFolder {
         val db = dbHelper.readableDatabase
         db.query(
             SQLContract.Folders.TABLE_NAME,
@@ -167,7 +205,7 @@ open class SqliteFSFolder internal constructor(
         }
     }
 
-    override suspend fun rem(path: PathPart): File {
+    override suspend fun rem(path: PathPart): SqliteFSFile {
         val db = dbHelper.readableDatabase
         db.query(
             SQLContract.Files.TABLE_NAME,
