@@ -124,7 +124,7 @@ open class GoogleDriveAPI(
             contentType(ContentType.Application.Json)
             @Serializable
             data class Req(val mimeType: String? = null, val name: String, val parents: List<String>)
-            setBody(Json{ encodeDefaults = false }.encodeToString(Req(mimeType?.toString(), name, listOf(parentId))))
+            setBody(Json { encodeDefaults = false }.encodeToString(Req(mimeType?.toString(), name, listOf(parentId))))
         }
         if (response.status.value != 200) {
             // TODO: handle it more accurately ?

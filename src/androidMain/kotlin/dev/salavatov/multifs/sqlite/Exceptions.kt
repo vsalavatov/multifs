@@ -17,4 +17,4 @@ open class SqliteFSFileNotFoundException(message: String? = null, cause: Throwab
     SqliteFSNodeNotFoundException(message, cause), VFSFolderNotFoundException
 
 open class SqliteFSFileExistsException(message: String? = null, cause: Throwable? = null) :
-        SqliteFSException(message, cause), VFSFileExistsException
+    SqliteFSException(message, cause), VFSFileExistsException
