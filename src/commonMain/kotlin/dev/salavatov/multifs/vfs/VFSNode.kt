@@ -7,38 +7,23 @@ interface VFSNode {
 }
 
 interface File : VFSNode {
-    fun remove()
+    suspend fun remove()
 
-    suspend fun read(): ByteArray // InputStreamByteArray ?
-    suspend fun write(data: ByteArray) // OutputStreamByteArray ?
+    suspend fun read(): ByteArray
+    suspend fun write(data: ByteArray)
 }
 
 interface Folder : VFSNode {
-    fun listFolder(): List<VFSNode>
+    suspend fun listFolder(): List<VFSNode>
 
-    fun createFolder(name: PathPart): Folder
-    fun remove(recursively: Boolean = false)
+    suspend fun createFolder(name: PathPart): Folder
+    suspend fun remove(recursively: Boolean = false)
 
-    fun createFile(name: PathPart): File
+    suspend fun createFile(name: PathPart): File
 
-    operator fun div(path: PathPart): Folder
-    operator fun rem(path: PathPart): File
+    suspend operator fun div(path: PathPart): Folder
+    suspend operator fun rem(path: PathPart): File
 }
 
-inline fun <reified T: VFSNode> Folder.find(path: PathPart): T? {
-    listFolder().forEach {
-        if (it.name == path && it is T) {
-            return it
-        }
-    }
-    return null
-}
-
-interface RootFolder : Folder {
-    override val parent: Folder
-        get() = this
-    override val name: String
-        get() = ""
-    override val absolutePath: AbsolutePath
-        get() = emptyList()
-}
+val Folder.isRoot: Boolean
+    get() = this == this.parent

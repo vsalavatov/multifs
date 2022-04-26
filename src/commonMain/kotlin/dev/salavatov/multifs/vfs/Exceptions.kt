@@ -1,3 +1,6 @@
 package dev.salavatov.multifs.vfs
 
-class VFSException(message: String? = null, cause: Throwable? = null) : Exception(message, cause)
+open class VFSException(message: String? = null, cause: Throwable? = null) : Exception(message, cause)
+interface VFSFileNotFoundException
+interface VFSFolderNotFoundException
+interface VFSFileExistsException
