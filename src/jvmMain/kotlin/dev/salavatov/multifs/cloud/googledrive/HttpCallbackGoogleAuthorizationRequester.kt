@@ -7,7 +7,6 @@ import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.util.network.*
 import kotlinx.coroutines.CompletableDeferred
 import java.awt.Desktop
 import java.net.URI
@@ -42,7 +41,7 @@ class HttpCallbackGoogleAuthorizationRequester(
                 }
             }
         }.start(wait = false)
-        baseRedirectUri = "http://127.0.0.1:${callbackServer.networkAddresses()[0].port}"
+        baseRedirectUri = "http://127.0.0.1:${callbackServer.resolvedConnectors()[0].port}"
 
         openInBrowser(
             makeOAuthURI(redirectUri = baseRedirectUri)

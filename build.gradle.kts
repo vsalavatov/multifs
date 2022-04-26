@@ -1,24 +1,17 @@
 plugins {
-    kotlin("multiplatform") version "1.6.10"
-    kotlin("plugin.serialization") version "1.6.10"
+    kotlin("multiplatform") version Versions.kotlin
+    kotlin("plugin.serialization") version Versions.kotlinSerialization
     id("maven-publish")
-    id("com.android.library") version "7.0.0"
+    id("com.android.library") version Versions.androidGradlePlugin
 }
 
 group = "dev.salavatov"
-version = "0.0.1"
+version = Versions.multifs
 
 repositories {
     mavenCentral()
     google()
-
-    maven {
-        url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") // for ktor 2.0.0-eap
-    }
 }
-
-val serializationVersion: String by project
-val ktorVersion: String by project
 
 kotlin {
     jvm {
@@ -56,11 +49,12 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.kotlinCoroutines}")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.kotlinxSerializationJson}")
 
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-auth:$ktorVersion")
-                implementation("io.ktor:ktor-client-serialization:$ktorVersion")
+                implementation("io.ktor:ktor-client-core:${Versions.ktor}")
+                implementation("io.ktor:ktor-client-auth:${Versions.ktor}")
+                implementation("io.ktor:ktor-client-serialization:${Versions.ktor}")
             }
         }
         val commonTest by getting {
@@ -75,34 +69,34 @@ kotlin {
         val jvmMain by getting {
             dependsOn(commonJvmAndroid)
             dependencies {
-                implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                implementation("io.ktor:ktor-client-cio:${Versions.ktor}")
 
-                implementation("io.ktor:ktor-server-core:$ktorVersion")
-                implementation("io.ktor:ktor-server-cio:$ktorVersion")
+                implementation("io.ktor:ktor-server-core:${Versions.ktor}")
+                implementation("io.ktor:ktor-server-cio:${Versions.ktor}")
             }
         }
         val jvmTest by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.5.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.kotlinxCoroutinesTest}}")
             }
         }
         val androidMain by getting {
             dependsOn(commonJvmAndroid)
             dependencies {
-                implementation("androidx.activity:activity-ktx:1.4.0")
-                implementation("com.google.android.gms:play-services-auth:20.1.0")
-                implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
+                implementation("androidx.activity:activity-ktx:${Versions.androidActivityKtx}")
+                implementation("com.google.android.gms:play-services-auth:${Versions.googlePlayServicesAuth}")
+                implementation("io.ktor:ktor-client-okhttp:${Versions.ktor}")
             }
         }
         val jsMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-js:$ktorVersion")
+                implementation("io.ktor:ktor-client-js:${Versions.ktor}")
             }
         }
         val jsTest by getting
         val nativeMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-curl:$ktorVersion")
+                implementation("io.ktor:ktor-client-curl:${Versions.ktor}")
             }
         }
         val nativeTest by getting
@@ -119,10 +113,10 @@ android {
             kotlin.setSrcDirs(listOf("$androidMain/kotlin", "src/commonJvmAndroid/kotlin"))
         }
     }
-    compileSdkVersion(29) // TODO
+    compileSdk = Versions.androidCompileSdk
     defaultConfig {
-        minSdkVersion(21)
-        targetSdkVersion(29)
+        minSdk = Versions.androidMinSdk
+        targetSdk = Versions.androidTargetSdk
     }
 }
 
