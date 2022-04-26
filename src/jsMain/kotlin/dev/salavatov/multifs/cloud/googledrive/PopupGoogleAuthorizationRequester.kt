@@ -35,7 +35,7 @@ class PopupGoogleAuthorizationRequester(
         val authData = googleUser.getAuthResponse(true)
         return GoogleAuthTokens(
             authData.access_token as String,
-            "" // refresh token is stored inside google platform framework
+            null // refresh token is stored inside google platform framework and isn't available through authData object
         )
     }
 
@@ -44,7 +44,7 @@ class PopupGoogleAuthorizationRequester(
         val authData = googleUser.reloadAuthResponse().unsafeCast<Promise<dynamic>>().await()
         return GoogleAuthTokens(
             authData.access_token as String,
-            "" // refresh token is stored inside google platform framework
+            null // refresh token is stored inside google platform framework and isn't available through authData object
         )
     }
 }
