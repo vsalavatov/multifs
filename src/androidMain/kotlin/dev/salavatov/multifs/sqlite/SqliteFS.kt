@@ -227,7 +227,8 @@ open class SqliteFSFolder(
 
 }
 
-open class SqliteFSRoot(dbHelper: SqliteFSDatabaseHelper) : SqliteFSFolder(dbHelper, 0, "", null) {
+open class SqliteFSRoot(dbHelper: SqliteFSDatabaseHelper) :
+    SqliteFSFolder(dbHelper, SQLContract.Folders.ROOT_ID, "", null) {
     override val name: String
         get() = ""
     override val parent: SqliteFSFolder
