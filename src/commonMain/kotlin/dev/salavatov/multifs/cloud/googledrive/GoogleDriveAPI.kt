@@ -46,7 +46,7 @@ open class GoogleDriveAPI(
     suspend fun list(folderId: String): List<GDriveNativeNodeData> {
         val endpoint = "https://www.googleapis.com/drive/v3/files"
         val q = "'$folderId' in parents"
-        val fields = "files(*)" // TODO: optimize
+        val fields = "files(id,name,size,mimeType,parents,md5Checksum)"
         val pageSize = 1000 // max permitted value
         var pageToken: String? = null
 
@@ -116,15 +116,15 @@ open class GoogleDriveAPI(
     suspend fun createFile(
         name: String,
         parentId: String,
-        mimeType: ContentType = ContentType.Application.OctetStream
+        mimeType: ContentType? = null
     ): GDriveNativeFileData {
         val endpoint = "https://www.googleapis.com/drive/v3/files"
         val response = apiClient.post(endpoint) {
             parameter("uploadType", "multipart")
             contentType(ContentType.Application.Json)
             @Serializable
-            data class Req(val mimeType: String, val name: String, val parents: List<String>)
-            setBody(Json.encodeToString(Req(mimeType.toString(), name, listOf(parentId))))
+            data class Req(val mimeType: String? = null, val name: String, val parents: List<String>)
+            setBody(Json{ encodeDefaults = false }.encodeToString(Req(mimeType?.toString(), name, listOf(parentId))))
         }
         if (response.status.value != 200) {
             // TODO: handle it more accurately ?
