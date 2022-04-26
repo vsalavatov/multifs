@@ -95,29 +95,45 @@ open class GDriveFolder(
     }
 
     override suspend fun listFolder(): List<GDriveNode> {
-        val rawEntries = api.list(id)
-        return rawEntries.map { it.convert() }
+        try {
+            val rawEntries = api.list(id)
+            return rawEntries.map { it.convert() }
+        } catch (e: GoogleDriveAPIException) {
+            throw GoogleDriveFSException("listFolder failed", e)
+        }
     }
 
     override suspend fun createFolder(name: PathPart): GDriveFolder {
-        val rawEntry = api.createFolder(name, id)
-        return rawEntry.convert() as GDriveFolder
+        try {
+            val rawEntry = api.createFolder(name, id)
+            return rawEntry.convert() as GDriveFolder
+        } catch (e: GoogleDriveAPIException) {
+            throw GoogleDriveFSException("createFolder failed", e)
+        }
     }
 
     override suspend fun remove(recursively: Boolean) {
-        if (recursively) {
-            return api.delete(id)
-        }
-        val children = listFolder()
-        if (children.isEmpty()) {
-            return api.delete(id)
+        try {
+            if (recursively) {
+                return api.delete(id)
+            }
+            val children = listFolder()
+            if (children.isEmpty()) {
+                return api.delete(id)
+            }
+        } catch (e: GoogleDriveAPIException) {
+            throw GoogleDriveFSException("remove failed", e)
         }
         throw GoogleDriveFSException("cannot delete folder $id non-recursively as it contains children")
     }
 
     override suspend fun createFile(name: PathPart): GDriveFile {
-        val rawEntry = api.createFile(name, id)
-        return rawEntry.convert() as GDriveFile
+        try {
+            val rawEntry = api.createFile(name, id)
+            return rawEntry.convert() as GDriveFile
+        } catch (e: GoogleDriveAPIException) {
+            throw GoogleDriveFSException("createFile failed", e)
+        }
     }
 
     override suspend fun div(path: PathPart): GDriveFolder { // TODO: optimize
@@ -154,14 +170,26 @@ open class GDriveFile(
     val mimeType: String
 ) : GDriveNode(api, id, name), File {
     override suspend fun remove() {
-        return api.delete(id)
+        try {
+            return api.delete(id)
+        } catch (e: GoogleDriveAPIException) {
+            throw GoogleDriveFSException("delete failed", e)
+        }
     }
 
     override suspend fun read(): ByteArray {
-        return api.download(id)
+        try {
+            return api.download(id)
+        } catch (e: GoogleDriveFSException) {
+            throw GoogleDriveFSException("download failed", e)
+        }
     }
 
     override suspend fun write(data: ByteArray) {
-        return api.upload(id, data)
+        try {
+            return api.upload(id, data)
+        } catch (e: GoogleDriveAPIException) {
+            throw GoogleDriveFSException("upload failed", e)
+        }
     }
 }
