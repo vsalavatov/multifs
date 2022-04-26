@@ -52,7 +52,7 @@ kotlin {
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
     }
 
-    
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -68,7 +68,12 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
+        val commonJvmAndroid = create("commonJvmAndroid") {
+            dependsOn(commonMain)
+            dependencies {}
+        }
         val jvmMain by getting {
+            dependsOn(commonJvmAndroid)
             dependencies {
                 implementation("io.ktor:ktor-client-cio:$ktorVersion")
 
@@ -82,6 +87,7 @@ kotlin {
             }
         }
         val androidMain by getting {
+            dependsOn(commonJvmAndroid)
             dependencies {
                 implementation("androidx.activity:activity-ktx:1.4.0")
                 implementation("com.google.android.gms:play-services-auth:20.1.0")
@@ -110,7 +116,7 @@ android {
             manifest.srcFile("$androidMain/AndroidManifest.xml")
             res.setSrcDirs(listOf("$androidMain/res", "src/commonMain/resources/"))
             java.setSrcDirs(listOf("$androidMain/java"))
-            kotlin.setSrcDirs(listOf("$androidMain/kotlin"))
+            kotlin.setSrcDirs(listOf("$androidMain/kotlin", "src/commonJvmAndroid/kotlin"))
         }
     }
     compileSdkVersion(29) // TODO
@@ -125,7 +131,10 @@ tasks.named<Test>("jvmTest") {
     testLogging {
         showExceptions = true
         showStandardStreams = true
-        events = setOf(org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED, org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED)
+        events = setOf(
+            org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED,
+            org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED
+        )
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 }

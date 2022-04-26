@@ -5,13 +5,13 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.*
 
-open class SystemFS : VFS<SystemFile, SystemFolder> {
+open class SystemFS(private val rootPath: Path = Paths.get(".").toAbsolutePath().root) : VFS<SystemFile, SystemFolder> {
     companion object {
         fun AbsolutePath.represent(): String = joinToString("/", "/")
     }
 
     override val root: SystemRoot
-        get() = SystemRoot()
+        get() = SystemRoot(rootPath)
 
     override suspend fun move(
         file: SystemFile,
@@ -92,7 +92,7 @@ open class SystemFolder(nioPath: Path) : SystemNode(nioPath), Folder {
     }
 }
 
-open class SystemRoot : SystemFolder(Paths.get(".").toAbsolutePath().root) {
+open class SystemRoot(actualPathToRoot: Path) : SystemFolder(actualPathToRoot) {
     override val name: String
         get() = ""
     override val parent: Folder
