@@ -70,6 +70,8 @@ kotlin {
         val jvmMain by getting {
             dependsOn(commonJvmAndroid)
             dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:${Versions.kotlinCoroutines}")
+
                 implementation("io.ktor:ktor-client-cio:${Versions.ktor}")
 
                 implementation("io.ktor:ktor-server-core:${Versions.ktor}")
@@ -79,7 +81,7 @@ kotlin {
         }
         val jvmTest by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.kotlinxCoroutinesTest}")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test-jvm:${Versions.kotlinxCoroutinesTest}")
             }
         }
         val androidMain by getting {
