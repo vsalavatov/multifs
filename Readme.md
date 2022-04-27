@@ -8,11 +8,11 @@ the need to write repetitive platform-specific code for each target platform.
 
 ### Currently available backends
 
-| Name           | Description                                                | JVM Desktop | Android | JS browser |
-|----------------|------------------------------------------------------------|-------------|---------|------------|
-| `SystemFS`     | a proxy for `java.nio.Path`                                | +           | +       |            |
-| `Google Drive` | a wrapper around Google API, based on Ktor 2.0             | +           | +       | +          |
-| `SQLite`       | emulates a tree-structured filesystem in a SQLite database |             | +       |            | 
+| Name             | Description                                                | JVM Desktop | Android | JS browser |
+|------------------|------------------------------------------------------------|-------------|---------|------------|
+| `SystemFS`       | a proxy for `java.nio.Path`                                | +           | +       |            |
+| `GoogleDriveFS`  | a wrapper around Google API, based on Ktor 2.0             | +           | +       | +          |
+| `SqliteFS`       | emulates a tree-structured filesystem in a SQLite database |             | +       |            | 
 
 ### Usage examples
 
