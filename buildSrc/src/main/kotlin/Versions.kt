@@ -1,5 +1,5 @@
 object Versions {
-    const val multifs = "0.0.1"
+    const val multifs = "0.1.0"
 
     const val kotlin = "1.6.10"
     const val kotlinCoroutines = "1.6.1"
