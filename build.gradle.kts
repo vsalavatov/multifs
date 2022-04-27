@@ -54,7 +54,8 @@ kotlin {
 
                 implementation("io.ktor:ktor-client-core:${Versions.ktor}")
                 implementation("io.ktor:ktor-client-auth:${Versions.ktor}")
-                implementation("io.ktor:ktor-client-serialization:${Versions.ktor}")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:${Versions.ktor}")
+                implementation("io.ktor:ktor-utils:${Versions.ktor}")
             }
         }
         val commonTest by getting {
@@ -73,18 +74,22 @@ kotlin {
 
                 implementation("io.ktor:ktor-server-core:${Versions.ktor}")
                 implementation("io.ktor:ktor-server-cio:${Versions.ktor}")
+                implementation("io.ktor:ktor-utils-jvm:${Versions.ktor}")
             }
         }
         val jvmTest by getting {
             dependencies {
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.kotlinxCoroutinesTest}}")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.kotlinxCoroutinesTest}")
             }
         }
         val androidMain by getting {
             dependsOn(commonJvmAndroid)
             dependencies {
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:${Versions.kotlinCoroutines}")
+
                 implementation("androidx.activity:activity-ktx:${Versions.androidActivityKtx}")
                 implementation("com.google.android.gms:play-services-auth:${Versions.googlePlayServicesAuth}")
+
                 implementation("io.ktor:ktor-client-okhttp:${Versions.ktor}")
             }
         }
@@ -94,12 +99,6 @@ kotlin {
             }
         }
         val jsTest by getting
-        val nativeMain by getting {
-            dependencies {
-                implementation("io.ktor:ktor-client-curl:${Versions.ktor}")
-            }
-        }
-        val nativeTest by getting
     }
 }
 
@@ -146,4 +145,3 @@ project.extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatfor
         ).contains(sourceSet.name)
     }
 }
-

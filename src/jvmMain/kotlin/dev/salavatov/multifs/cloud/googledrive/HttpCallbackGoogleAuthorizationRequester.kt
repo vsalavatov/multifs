@@ -34,8 +34,8 @@ class HttpCallbackGoogleAuthorizationRequester(
         val callbackServer = embeddedServer(CIO, 0) {
             routing {
                 get("/") {
-                    val code = context.request.queryParameters["code"]
-                        ?: throw GoogleDriveAPIException("authenticator: unexpected callback result: params: ${context.request.queryParameters}")
+                    val code = call.request.queryParameters["code"]
+                        ?: throw GoogleDriveAPIException("authenticator: unexpected callback result: params: ${call.request.queryParameters}")
                     tokensFuture.complete(exchangeAuthCodeOnTokens(appCredentials, baseRedirectUri, code))
                     call.respondText(successPageHtml, ContentType.Text.Html)
                 }
