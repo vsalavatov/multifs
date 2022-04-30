@@ -6,15 +6,15 @@ interface VFS<FileClass : File, FolderClass : Folder> {
     val root: FolderClass
 
     suspend fun move(
-        file: FileClass,
-        newParent: FolderClass,
+        file: File,
+        newParent: Folder,
         newName: PathPart? = null,
         overwrite: Boolean = false
     ): FileClass
 
     suspend fun copy(
-        file: FileClass,
-        newParent: FolderClass,
+        file: File,
+        newParent: Folder,
         newName: PathPart? = null,
         overwrite: Boolean = false
     ): FileClass
