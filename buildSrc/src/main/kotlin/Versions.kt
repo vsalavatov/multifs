@@ -1,9 +1,9 @@
 object Versions {
     const val multifs = "0.1.0"
 
-    const val kotlin = "1.6.10"
+    const val kotlin = "1.6.20"
     const val kotlinCoroutines = "1.6.1"
-    const val kotlinSerialization = "1.6.10"
+    const val kotlinSerialization = "1.6.20"
 
     const val kotlinxCoroutinesTest = "1.6.1"
     const val kotlinxSerializationJson = "1.3.2"
