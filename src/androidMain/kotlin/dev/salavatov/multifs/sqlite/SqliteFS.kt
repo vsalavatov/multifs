@@ -8,64 +8,46 @@ open class SqliteFS(protected val dbHelper: SqliteFSDatabaseHelper) : VFS<Sqlite
         get() = SqliteFSRoot(dbHelper)
 
     override suspend fun copy(
-        file: SqliteFSFile,
-        newParent: SqliteFSFolder,
+        file: File,
+        newParent: Folder,
         newName: PathPart?,
         overwrite: Boolean
     ): SqliteFSFile {
+        if (newParent !is SqliteFSFolder) throw SqliteFSException("can't operate on folders that don't belong to SqliteFS")
         val targetName = newName ?: file.name
         if (newParent == file.parent && targetName == file.name) {
             // no op
-            return file
+            return file.fromGeneric()
         }
-        return try {
-            val targetFile = newParent % targetName
-            // targetFile exists
-            if (overwrite) {
-                targetFile.write(file.read())
-                targetFile
-            } else {
-                throw SqliteFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
-            }
-        } catch (_: SqliteFSFileNotFoundException) {
-            val targetFile = newParent.createFile(targetName)
-            targetFile.write(file.read())
-            targetFile
-        }
+        return genericCopy(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
+            throw SqliteFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+        })
     }
 
     override suspend fun move(
-        file: SqliteFSFile,
-        newParent: SqliteFSFolder,
+        file: File,
+        newParent: Folder,
         newName: PathPart?,
         overwrite: Boolean
     ): SqliteFSFile {
+        if (newParent !is SqliteFSFolder) throw SqliteFSException("can't operate on folders that don't belong to SqliteFS")
         val targetName = newName ?: file.name
         if (newParent == file.parent && targetName == file.name) {
             // no op
-            return file
+            return file.fromGeneric()
         }
-        return try {
-            val targetFile = newParent % targetName
-            // targetFile exists
-            if (overwrite) {
-                targetFile.write(file.read())
-                file.remove()
-                targetFile
-            } else {
-                throw SqliteFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
-            }
-        } catch (_: SqliteFSFileNotFoundException) {
-            val targetFile = newParent.createFile(targetName)
-            targetFile.write(file.read())
-            file.remove()
-            targetFile
-        }
+        return genericMove(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
+            throw SqliteFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+        })
     }
 
     override fun representPath(path: AbsolutePath): String {
         return path.joinToString("/", "/")
     }
+
+    private fun File.fromGeneric(): SqliteFSFile =
+        this as? SqliteFSFile
+            ?: throw SqliteFSException("expected the file to be a part of the SqliteFS (class: ${this.javaClass.kotlin.qualifiedName}")
 }
 
 sealed class SqliteFSNode(
@@ -217,7 +199,7 @@ open class SqliteFSFolder(
             null
         ).use {
             if (it.count == 0)
-                throw SqliteFSFolderNotFoundException("file $path not found at $absolutePath")
+                throw SqliteFSFileNotFoundException("file $path not found at $absolutePath")
             if (it.count > 1)
                 throw SqliteFSException("internal invariant failure (more than one child file with specified name")
             it.moveToFirst()
@@ -225,6 +207,20 @@ open class SqliteFSFolder(
         }
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is SqliteFSFolder) {
+            return id == other.id && name == other.name && parent_ == other.parent_
+        }
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        var result = parent_?.hashCode() ?: 0
+        result = 31 * result + id
+        result = 37 * result + name.hashCode()
+        return result
+    }
 }
 
 open class SqliteFSRoot(dbHelper: SqliteFSDatabaseHelper) :
@@ -288,6 +284,21 @@ open class SqliteFSFile(
         )
         if (updated != 1)
             throw SqliteFSFileNotFoundException("couldn't update $absolutePath")
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is SqliteFSFile) {
+            return id == other.id && name == other.name && parent == other.parent
+        }
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        var result = parent.hashCode()
+        result = 31 * result + id
+        result = 37 * result + name.hashCode()
+        return result
     }
 }
 

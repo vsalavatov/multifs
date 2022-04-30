@@ -6,64 +6,49 @@ open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GD
     override val root = GDriveRoot(api)
 
     override suspend fun copy(
-        file: GDriveFile,
-        newParent: GDriveFolder,
+        file: File,
+        newParent: Folder,
         newName: PathPart?,
         overwrite: Boolean
     ): GDriveFile {
-        // TODO: optimize
+        if (newParent !is GDriveFolder) throw GoogleDriveFSException("can't operate on folders that don't belong to GoogleDriveFS")
         val targetName = newName ?: file.name
         if (newParent == file.parent && targetName == file.name) {
             // no op
-            return file
+            return file.fromGeneric()
         }
-        return try {
-            val targetFile = newParent % targetName
-            // targetFile exists
-            if (overwrite) {
-                targetFile.write(file.read())
-                targetFile
-            } else {
-                throw GoogleDriveFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
-            }
-        } catch (_: GoogleDriveFSFileNotFoundException) {
-            val targetFile = newParent.createFile(targetName)
-            targetFile.write(file.read())
-            targetFile
-        }
+        // if (file is GDriveFile) {
+        // TODO: more efficient implementation through API call
+        // }
+        return genericCopy(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
+            throw GoogleDriveFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+        })
     }
 
     override suspend fun move(
-        file: GDriveFile,
-        newParent: GDriveFolder,
+        file: File,
+        newParent: Folder,
         newName: PathPart?,
         overwrite: Boolean
     ): GDriveFile {
-        // TODO: optimize
+        if (newParent !is GDriveFolder) throw GoogleDriveFSException("can't operate on folders that don't belong to GoogleDriveFS")
         val targetName = newName ?: file.name
         if (newParent == file.parent && targetName == file.name) {
             // no op
-            return file
+            return file.fromGeneric()
         }
-        return try {
-            val targetFile = newParent % targetName
-            // targetFile exists
-            if (overwrite) {
-                targetFile.write(file.read())
-                file.remove()
-                targetFile
-            } else {
-                throw GoogleDriveFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
-            }
-        } catch (_: GoogleDriveFSFileNotFoundException) {
-            val targetFile = newParent.createFile(targetName)
-            targetFile.write(file.read())
-            file.remove()
-            targetFile
-        }
+        // if (file is GDriveFile) {
+        // TODO: more efficient implementation through API call
+        // }
+        return genericMove(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
+            throw GoogleDriveFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
+        })
     }
 
     override fun representPath(path: AbsolutePath): String = path.joinToString("/", "/") // no native representation ?
+
+    private fun File.fromGeneric(): GDriveFile =
+        this as? GDriveFile ?: throw GoogleDriveFSException("expected the file to be a part of the GoogleDriveFS")
 }
 
 sealed class GDriveNode(
@@ -150,6 +135,21 @@ open class GDriveFolder(
 
     override val parent: GDriveFolder
         get() = parent_ ?: this
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is GDriveFolder) {
+            return id == other.id && name == other.name && parent_ == other.parent_
+        }
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        var result = parent_?.hashCode() ?: 0
+        result = 31 * result + id.hashCode()
+        result = 37 * result + name.hashCode()
+        return result
+    }
 }
 
 open class GDriveRoot(api: GoogleDriveAPI) : GDriveFolder(api, null, "root", "") {
@@ -191,5 +191,20 @@ open class GDriveFile(
         } catch (e: GoogleDriveAPIException) {
             throw GoogleDriveFSException("upload failed", e)
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is GDriveFile) {
+            return id == other.id && name == other.name && parent == other.parent
+        }
+        return super.equals(other)
+    }
+
+    override fun hashCode(): Int {
+        var result = parent.hashCode()
+        result = 31 * result + id.hashCode()
+        result = 37 * result + name.hashCode()
+        return result
     }
 }
