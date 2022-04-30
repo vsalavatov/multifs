@@ -11,10 +11,10 @@ open class GoogleDriveFSNodeNotFoundException(message: String? = null, cause: Th
     GoogleDriveFSException(message, cause)
 
 open class GoogleDriveFSFolderNotFoundException(message: String? = null, cause: Throwable? = null) :
-    GoogleDriveFSNodeNotFoundException(message, cause), VFSFileNotFoundException
+    GoogleDriveFSNodeNotFoundException(message, cause), VFSFolderNotFoundException
 
 open class GoogleDriveFSFileNotFoundException(message: String? = null, cause: Throwable? = null) :
-    GoogleDriveFSNodeNotFoundException(message, cause), VFSFolderNotFoundException
+    GoogleDriveFSNodeNotFoundException(message, cause), VFSFileNotFoundException
 
 open class GoogleDriveFSFileExistsException(message: String? = null, cause: Throwable? = null) :
     GoogleDriveFSException(message, cause), VFSFileExistsException

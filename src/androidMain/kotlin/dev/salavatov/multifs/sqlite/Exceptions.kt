@@ -11,10 +11,10 @@ open class SqliteFSNodeNotFoundException(message: String? = null, cause: Throwab
     SqliteFSException(message, cause)
 
 open class SqliteFSFolderNotFoundException(message: String? = null, cause: Throwable? = null) :
-    SqliteFSNodeNotFoundException(message, cause), VFSFileNotFoundException
+    SqliteFSNodeNotFoundException(message, cause), VFSFolderNotFoundException
 
 open class SqliteFSFileNotFoundException(message: String? = null, cause: Throwable? = null) :
-    SqliteFSNodeNotFoundException(message, cause), VFSFolderNotFoundException
+    SqliteFSNodeNotFoundException(message, cause), VFSFileNotFoundException
 
 open class SqliteFSFileExistsException(message: String? = null, cause: Throwable? = null) :
     SqliteFSException(message, cause), VFSFileExistsException
