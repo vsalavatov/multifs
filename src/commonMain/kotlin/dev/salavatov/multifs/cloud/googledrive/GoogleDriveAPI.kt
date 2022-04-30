@@ -24,7 +24,7 @@ open class GoogleDriveAPI(
                 loadTokens {
                     tokenInfo = authorizer.requestAuthorization()
                     BearerTokens(
-                        accessToken = tokenInfo.accessToken, refreshToken = tokenInfo.refreshToken!!
+                        accessToken = tokenInfo.accessToken, refreshToken = tokenInfo.refreshToken ?: ""
                     )
                 }
 
@@ -35,7 +35,7 @@ open class GoogleDriveAPI(
                         refreshTokenInfo.refreshToken ?: tokenInfo.refreshToken
                     )
                     BearerTokens(
-                        accessToken = tokenInfo.accessToken, refreshToken = tokenInfo.refreshToken!!
+                        accessToken = tokenInfo.accessToken, refreshToken = tokenInfo.refreshToken ?: ""
                     )
                 }
             }
