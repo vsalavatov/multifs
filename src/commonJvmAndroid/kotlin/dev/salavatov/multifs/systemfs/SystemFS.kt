@@ -1,11 +1,11 @@
 package dev.salavatov.multifs.systemfs
 
 import dev.salavatov.multifs.vfs.*
-import java.nio.file.DirectoryNotEmptyException
-import java.nio.file.NoSuchFileException
-import java.nio.file.NotDirectoryException
-import java.nio.file.Path
-import java.nio.file.Paths
+import dev.salavatov.multifs.vfs.extensions.FileWStreamingIO
+import io.ktor.util.cio.*
+import io.ktor.utils.io.*
+import java.nio.file.*
+import kotlin.io.FileAlreadyExistsException
 import kotlin.io.path.*
 
 open class SystemFS(protected val rootPath: Path = Paths.get(".").toAbsolutePath().root) :
@@ -131,7 +131,10 @@ open class SystemFSFolder(nioPath: Path) : SystemNode(nioPath), Folder {
     override suspend fun createFolder(name: PathPart) = try {
         SystemFSFolder((nioPath / name).createDirectory())
     } catch (e: FileAlreadyExistsException) {
-        throw SystemFSNodeExistsException("couldn't create folder $name at $absolutePath: node with such name already exists", e)
+        throw SystemFSNodeExistsException(
+            "couldn't create folder $name at $absolutePath: node with such name already exists",
+            e
+        )
     } catch (e: Throwable) {
         throw SystemFSException("couldn't create file $name at $absolutePath", e)
     }
@@ -157,7 +160,10 @@ open class SystemFSFolder(nioPath: Path) : SystemNode(nioPath), Folder {
     override suspend fun createFile(name: PathPart) = try {
         SystemFSFile((nioPath / name).createFile())
     } catch (e: FileAlreadyExistsException) {
-        throw SystemFSNodeExistsException("couldn't create file $name at $absolutePath: node with such name already exists", e)
+        throw SystemFSNodeExistsException(
+            "couldn't create file $name at $absolutePath: node with such name already exists",
+            e
+        )
     } catch (e: Throwable) {
         throw SystemFSException("couldn't create file $name at $absolutePath", e)
     }
@@ -192,7 +198,7 @@ open class SystemFSRoot(actualPathToRoot: Path) : SystemFSFolder(actualPathToRoo
         get() = emptyList()
 }
 
-open class SystemFSFile(nioPath: Path) : SystemNode(nioPath), File {
+open class SystemFSFile(nioPath: Path) : SystemNode(nioPath), FileWStreamingIO {
     override val parent: SystemFSFolder
         get() = SystemFSFolder(nioPath.parent)
 
@@ -219,6 +225,18 @@ open class SystemFSFile(nioPath: Path) : SystemNode(nioPath), File {
             nioPath.writeBytes(data)
         } catch (e: Throwable) {
             throw SystemFSException("couldn't write to $name", e)
+        }
+    }
+
+    override suspend fun readStream(): ByteReadChannel {
+        return nioPath.readChannel()
+    }
+
+    override suspend fun writeStream(data: ByteReadChannel) {
+        try {
+            data.copyAndClose(nioPath.toFile().writeChannel())
+        } catch (e: Throwable) {
+            throw SystemFSException("couldn't write stream to $name", e)
         }
     }
 }
