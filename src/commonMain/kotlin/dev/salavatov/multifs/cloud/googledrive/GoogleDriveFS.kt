@@ -5,6 +5,10 @@ import dev.salavatov.multifs.vfs.*
 open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFolder> {
     override val root = GDriveRoot(api)
 
+    /**
+     * be aware that `overwrite` doesn't affect anything because Google Drive will create a new file
+     * (even if there were already a file with such name)
+     */
     override suspend fun copy(
         file: File,
         newParent: Folder,
@@ -17,9 +21,21 @@ open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GD
             // no op
             return file.fromGeneric()
         }
-        // if (file is GDriveFile) {
-        // TODO: more efficient implementation through API call
-        // }
+        if (file is GDriveFile) {
+            try {
+                val nativeFileData = api.copyFile(file.id, newParent.id, targetName)
+                return GDriveFile(
+                    api,
+                    newParent,
+                    nativeFileData.id,
+                    nativeFileData.name,
+                    nativeFileData.size,
+                    nativeFileData.mimeType
+                )
+            } catch (e: Throwable) {
+                throw GoogleDriveFSException("couldn't copy ${file.absolutePath} to ${newParent.absolutePath}", e)
+            }
+        }
         return genericCopy(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
             throw GoogleDriveFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
         })
@@ -37,9 +53,21 @@ open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GD
             // no op
             return file.fromGeneric()
         }
-        // if (file is GDriveFile) {
-        // TODO: more efficient implementation through API call
-        // }
+         if (file is GDriveFile) {
+             try {
+                 val nativeFileData = api.moveFile(file.id, file.parent.id, newParent.id, targetName)
+                 return GDriveFile(
+                     api,
+                     newParent,
+                     nativeFileData.id,
+                     nativeFileData.name,
+                     nativeFileData.size,
+                     nativeFileData.mimeType
+                 )
+             } catch (e: Throwable) {
+                 throw GoogleDriveFSException("couldn't move ${file.absolutePath} to ${newParent.absolutePath}", e)
+             }
+         }
         return genericMove(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
             throw GoogleDriveFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
         })
