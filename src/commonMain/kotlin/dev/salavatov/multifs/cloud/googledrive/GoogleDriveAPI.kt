@@ -7,9 +7,14 @@ import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.utils.io.*
+import io.ktor.utils.io.bits.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.*
+import kotlin.math.min
 
 open class GoogleDriveAPIException(message: String? = null, cause: Throwable? = null) : Exception(message, cause)
 
@@ -148,6 +153,27 @@ open class GoogleDriveAPI(
         return response.body()
     }
 
+    suspend fun downloadStream(id: String): ByteReadChannel {
+        val endpoint = "https://www.googleapis.com/drive/v3/files/$id"
+        val resultStream = ByteChannel()
+        apiClient.launch {
+            apiClient.prepareGet(endpoint) {
+                parameter("alt", "media")
+            }.execute { httpResponse ->
+                try {
+                    if (httpResponse.status.value != 200) {
+                        throw GoogleDriveAPIException("failed to download file $id: ${httpResponse.status}")
+                    }
+                    val channel: ByteReadChannel = httpResponse.body()
+                    channel.copyAndClose(resultStream)
+                } catch (e: Throwable) {
+                    resultStream.close(e)
+                }
+            }
+        }
+        return resultStream
+    }
+
     suspend fun upload(id: String, data: ByteArray) {
         val endpoint = "https://www.googleapis.com/upload/drive/v3/files/$id"
         val response = apiClient.patch(endpoint) {
@@ -157,6 +183,85 @@ open class GoogleDriveAPI(
         }
         if (response.status.value != 200) {
             throw GoogleDriveAPIException("failed to upload file $id: ${response.status}")
+        }
+    }
+
+    suspend fun uploadStream(id: String, data: ByteReadChannel) {
+        val endpoint = "https://www.googleapis.com/upload/drive/v3/files/$id?uploadType=resumable"
+        val response = apiClient.patch(endpoint) {
+            parameter("uploadType", "resumable")
+        }
+        if (response.status.value != 200) {
+            throw GoogleDriveAPIException("failed to upload file $id: ${response.status}")
+        }
+        val uploadLocation = response.headers["Location"]
+            ?: throw GoogleDriveAPIException("failed to upload file $id: got no session url")
+
+        val CHUNK_SIZE = 256 * 1024 // 256 KB
+        val chunkBuffer = ByteArray(CHUNK_SIZE)
+        var totalSentBytes = 0
+        while (!data.isClosedForRead) { // TODO: this implementation is not efficient
+            // read chunk to buf
+            var readChunkBytes = 0
+            while (!data.isClosedForRead && readChunkBytes < CHUNK_SIZE) {
+                data.read { source, start, endExclusive -> // (CHUNK_SIZE - readChunkBytes)
+                    val consume = min((CHUNK_SIZE - readChunkBytes).toInt(), (endExclusive - start).toInt())
+                    source.copyTo(chunkBuffer, start, consume, readChunkBytes)
+                    readChunkBytes += consume
+                    consume
+                }
+            }
+            val totalSize = if (data.isClosedForRead) {
+                "${totalSentBytes + readChunkBytes}"
+            } else {
+                "*"
+            }
+            val totalSentBytesBefore = totalSentBytes
+            var retries = 0
+            while (totalSentBytes != totalSentBytesBefore + readChunkBytes) { // send data to server
+                if (retries >= 4)
+                    throw GoogleDriveAPIException("failed to upload data: too many retries")
+                val putResponse = apiClient.put(uploadLocation) {
+                    header(
+                        "Content-Range",
+                        "bytes $totalSentBytes-${totalSentBytesBefore + readChunkBytes - 1}/$totalSize"
+                    )
+                    if (readChunkBytes != CHUNK_SIZE || totalSentBytes != totalSentBytesBefore) {
+                        setBody(chunkBuffer.copyOfRange(totalSentBytes - totalSentBytesBefore, readChunkBytes))
+                    } else {
+                        setBody(chunkBuffer)
+                    }
+                }
+                if (putResponse.status.value == 308) { // Resume Incomplete
+                    val range = putResponse.headers["Range"]
+//                    println("Range header: $range, totalBefore: $totalSentBytesBefore, totalSent: $totalSentBytes, readChunkBytes: $readChunkBytes")
+                    if (range == null) {
+                        // server saved no data
+                        retries += 1
+                        continue
+                    }
+                    val bytes = range.removePrefix("bytes=").split("-").map { it.toInt() }
+                    if (bytes.size != 2 || bytes[0] != 0)
+                        throw GoogleDriveAPIException("failed to upload data: failed to parse Range header: $range")
+                    val lastUploadedByte = bytes[1] // 0-index
+                    if (totalSentBytes != lastUploadedByte + 1) {
+                        totalSentBytes = lastUploadedByte + 1
+                        retries = 0
+                    }
+                } else if (putResponse.status.value in listOf(200, 201)) { // OK
+                    // done
+                    if (!data.isClosedForRead) {
+                        throw GoogleDriveAPIException("failed to upload data: remote closed session while there is still data to upload")
+                    }
+                    return
+                } else if (putResponse.status.value == 503) { // Service Unavailable -- wait and retry
+                    retries += 1
+                    delay(250)
+                    continue
+                } else {
+                    throw GoogleDriveAPIException("failed to upload data: unexpected response, code: ${putResponse.status.value}")
+                }
+            }
         }
     }
 
@@ -185,7 +290,12 @@ open class GoogleDriveAPI(
         return parseNode(entryRaw) as GDriveNativeFileData
     }
 
-    suspend fun moveFile(id: String, oldParentId: String, newParentId: String, newName: String): GDriveNativeFileData {
+    suspend fun moveFile(
+        id: String,
+        oldParentId: String,
+        newParentId: String,
+        newName: String
+    ): GDriveNativeFileData {
         val endpoint = "https://www.googleapis.com/drive/v3/files/$id"
         val response = apiClient.patch(endpoint) {
             contentType(ContentType.Application.Json)

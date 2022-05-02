@@ -1,6 +1,8 @@
 package dev.salavatov.multifs.cloud.googledrive
 
 import dev.salavatov.multifs.vfs.*
+import dev.salavatov.multifs.vfs.extensions.FileWStreamingIO
+import io.ktor.utils.io.*
 
 open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GDriveFolder> {
     override val root = GDriveRoot(api)
@@ -53,21 +55,21 @@ open class GoogleDriveFS(protected val api: GoogleDriveAPI) : VFS<GDriveFile, GD
             // no op
             return file.fromGeneric()
         }
-         if (file is GDriveFile) {
-             try {
-                 val nativeFileData = api.moveFile(file.id, file.parent.id, newParent.id, targetName)
-                 return GDriveFile(
-                     api,
-                     newParent,
-                     nativeFileData.id,
-                     nativeFileData.name,
-                     nativeFileData.size,
-                     nativeFileData.mimeType
-                 )
-             } catch (e: Throwable) {
-                 throw GoogleDriveFSException("couldn't move ${file.absolutePath} to ${newParent.absolutePath}", e)
-             }
-         }
+        if (file is GDriveFile) {
+            try {
+                val nativeFileData = api.moveFile(file.id, file.parent.id, newParent.id, targetName)
+                return GDriveFile(
+                    api,
+                    newParent,
+                    nativeFileData.id,
+                    nativeFileData.name,
+                    nativeFileData.size,
+                    nativeFileData.mimeType
+                )
+            } catch (e: Throwable) {
+                throw GoogleDriveFSException("couldn't move ${file.absolutePath} to ${newParent.absolutePath}", e)
+            }
+        }
         return genericMove(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
             throw GoogleDriveFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
         })
@@ -111,7 +113,7 @@ open class GDriveFolder(
         try {
             val rawEntries = api.list(id)
             return rawEntries.map { it.convert() }
-        } catch (e: GoogleDriveAPIException) {
+        } catch (e: Throwable) {
             throw GoogleDriveFSException("listFolder failed", e)
         }
     }
@@ -120,7 +122,7 @@ open class GDriveFolder(
         try {
             val rawEntry = api.createFolder(name, id)
             return rawEntry.convert() as GDriveFolder
-        } catch (e: GoogleDriveAPIException) {
+        } catch (e: Throwable) {
             throw GoogleDriveFSException("createFolder failed", e)
         }
     }
@@ -134,7 +136,7 @@ open class GDriveFolder(
             if (children.isEmpty()) {
                 return api.delete(id)
             }
-        } catch (e: GoogleDriveAPIException) {
+        } catch (e: Throwable) {
             throw GoogleDriveFSException("remove failed", e)
         }
         throw GoogleDriveFSException("cannot delete folder $id non-recursively as it contains children")
@@ -144,7 +146,7 @@ open class GDriveFolder(
         try {
             val rawEntry = api.createFile(name, id)
             return rawEntry.convert() as GDriveFile
-        } catch (e: GoogleDriveAPIException) {
+        } catch (e: Throwable) {
             throw GoogleDriveFSException("createFile failed", e)
         }
     }
@@ -196,11 +198,11 @@ open class GDriveFile(
     name: String,
     val size: Long,
     val mimeType: String
-) : GDriveNode(api, id, name), File {
+) : GDriveNode(api, id, name), FileWStreamingIO {
     override suspend fun remove() {
         try {
             return api.delete(id)
-        } catch (e: GoogleDriveAPIException) {
+        } catch (e: Throwable) {
             throw GoogleDriveFSException("delete failed", e)
         }
     }
@@ -208,7 +210,7 @@ open class GDriveFile(
     override suspend fun read(): ByteArray {
         try {
             return api.download(id)
-        } catch (e: GoogleDriveFSException) {
+        } catch (e: Throwable) {
             throw GoogleDriveFSException("download failed", e)
         }
     }
@@ -216,7 +218,23 @@ open class GDriveFile(
     override suspend fun write(data: ByteArray) {
         try {
             return api.upload(id, data)
-        } catch (e: GoogleDriveAPIException) {
+        } catch (e: Throwable) {
+            throw GoogleDriveFSException("upload failed", e)
+        }
+    }
+
+    override suspend fun readStream(): ByteReadChannel {
+        try {
+            return api.downloadStream(id)
+        } catch (e: Throwable) {
+            throw GoogleDriveFSException("download failed", e)
+        }
+    }
+
+    override suspend fun writeStream(data: ByteReadChannel) {
+        try {
+            api.uploadStream(id, data)
+        } catch (e: Throwable) {
             throw GoogleDriveFSException("upload failed", e)
         }
     }
