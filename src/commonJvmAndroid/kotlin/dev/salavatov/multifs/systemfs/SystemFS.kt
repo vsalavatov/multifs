@@ -202,6 +202,16 @@ open class SystemFSFile(nioPath: Path) : SystemNode(nioPath), FileWStreamingIO {
     override val parent: SystemFSFolder
         get() = SystemFSFolder(nioPath.parent)
 
+    override suspend fun getSize(): Long {
+        try {
+            return nioPath.fileSize()
+        } catch (e: NoSuchFileException) {
+            throw SystemFSFileNotFoundException("couldn't get size of $name: file doesn't exist", e)
+        } catch (e: Throwable) {
+            throw SystemFSException("couldn't get size of $name", e)
+        }
+    }
+
     override suspend fun remove() {
         try {
             nioPath.deleteExisting()

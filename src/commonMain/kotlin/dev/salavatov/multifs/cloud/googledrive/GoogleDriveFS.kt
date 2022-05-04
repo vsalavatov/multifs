@@ -199,6 +199,15 @@ open class GDriveFile(
     val size: Long,
     val mimeType: String
 ) : GDriveNode(api, id, name), FileWStreamingIO {
+    override suspend fun getSize(): Long {
+        try {
+            val data = api.getFileMeta(id)
+            return data.size
+        } catch (e: Throwable) {
+            throw GoogleDriveFSException("getSize failed", e)
+        }
+    }
+
     override suspend fun remove() {
         try {
             return api.delete(id)
