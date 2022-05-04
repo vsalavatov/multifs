@@ -265,6 +265,28 @@ open class SqliteFSFile(
     override val parent: SqliteFSFolder
 ) : SqliteFSNode(dbHelper, id, name), File {
 
+    override suspend fun getSize(): Long {
+        try {
+            val db = dbHelper.readableDatabase
+            db.query(
+                SQLContract.Files.TABLE_NAME,
+                arrayOf("length(${SQLContract.Files.COLUMN_DATA})"),
+                "${SQLContract.Files.COLUMN_ID} = $id",
+                arrayOf(),
+                null,
+                null,
+                null
+            )
+        } catch (e: Throwable) {
+            throw SqliteFSException("db query failed", e)
+        }.use { cursor ->
+            if (cursor.count == 0)
+                throw SqliteFSFileNotFoundException("couldn't get size of $absolutePath")
+            cursor.moveToFirst()
+            return cursor.getLong(0)
+        }
+    }
+
     override suspend fun read(): ByteArray {
         try {
             val db = dbHelper.readableDatabase

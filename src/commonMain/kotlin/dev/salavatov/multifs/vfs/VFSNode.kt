@@ -7,6 +7,8 @@ interface VFSNode {
 }
 
 interface File : VFSNode {
+    suspend fun getSize(): Long
+
     suspend fun remove()
 
     suspend fun read(): ByteArray
@@ -17,9 +19,9 @@ interface Folder : VFSNode {
     suspend fun listFolder(): List<VFSNode>
 
     suspend fun createFolder(name: PathPart): Folder
-    suspend fun remove(recursively: Boolean = false)
-
     suspend fun createFile(name: PathPart): File
+
+    suspend fun remove(recursively: Boolean = false)
 
     suspend operator fun div(path: PathPart): Folder
     suspend operator fun rem(path: PathPart): File
