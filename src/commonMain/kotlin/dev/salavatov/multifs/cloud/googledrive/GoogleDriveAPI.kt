@@ -86,20 +86,17 @@ open class GoogleDriveAPI(
         return result
     }
 
-    private fun parseNode(
-        entry: JsonObject,
-    ): GDriveNativeNodeData {
-        val mimeType = entry["mimeType"]?.jsonPrimitive?.content
-            ?: throw GoogleDriveAPIException("response file object doesn't contain 'mimeType' field")
-        return try {
-            if (mimeType == FOLDER_MIMETYPE) {
-                jsonParser.decodeFromJsonElement<GDriveNativeFolderData>(entry)
-            } else {
-                jsonParser.decodeFromJsonElement<GDriveNativeFileData>(entry)
-            }
-        } catch (e: Throwable) {
-            throw GoogleDriveAPIException("couldn't parse node from json: $e", e)
+    suspend fun getFileMeta(id: String): GDriveNativeFileData {
+        val endpoint = "https://www.googleapis.com/drive/v3/files/$id"
+        val response = apiClient.get(endpoint) {
+            parameter("fields", defaultFieldsQuery)
         }
+        if (response.status.value != 200) {
+            // TODO: handle it more accurately ?
+            throw GoogleDriveAPIException("failed to read metadata of a file with id $id, status code: ${response.status}")
+        }
+        val entryRaw = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+        return parseNode(entryRaw) as GDriveNativeFileData
     }
 
     suspend fun createFolder(name: String, parentId: String): GDriveNativeFolderData {
@@ -313,6 +310,22 @@ open class GoogleDriveAPI(
         }
         val entryRaw = Json.parseToJsonElement(response.bodyAsText()).jsonObject
         return parseNode(entryRaw) as GDriveNativeFileData
+    }
+
+    private fun parseNode(
+        entry: JsonObject,
+    ): GDriveNativeNodeData {
+        val mimeType = entry["mimeType"]?.jsonPrimitive?.content
+            ?: throw GoogleDriveAPIException("response file object doesn't contain 'mimeType' field")
+        return try {
+            if (mimeType == FOLDER_MIMETYPE) {
+                jsonParser.decodeFromJsonElement<GDriveNativeFolderData>(entry)
+            } else {
+                jsonParser.decodeFromJsonElement<GDriveNativeFileData>(entry)
+            }
+        } catch (e: Throwable) {
+            throw GoogleDriveAPIException("couldn't parse node from json: $e", e)
+        }
     }
 
     protected val FOLDER_MIMETYPE = "application/vnd.google-apps.folder"
