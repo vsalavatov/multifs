@@ -13,11 +13,36 @@ open class SqliteFS(protected val dbHelper: SqliteFSDatabaseHelper) : VFS<Sqlite
         newName: PathPart?,
         overwrite: Boolean
     ): SqliteFSFile {
-        if (newParent !is SqliteFSFolder) throw SqliteFSException("can't operate on folders that don't belong to SqliteFS")
+        @Suppress("NAME_SHADOWING")
+        val newParent = newParent as? SqliteFSFolder
+            ?: throw SqliteFSException("can't operate on folders that don't belong to SqliteFS")
         val targetName = newName ?: file.name
         if (newParent == file.parent && targetName == file.name) {
             // no op
             return file.fromGeneric()
+        }
+        if (file is SqliteFSFile) {
+            try {
+                val db = dbHelper.writableDatabase
+                val Files = SQLContract.Files
+                db.execSQL(
+                    """
+                        INSERT INTO ${Files.TABLE_NAME} 
+                            (${Files.COLUMN_NAME}, ${Files.COLUMN_PARENT}, ${Files.COLUMN_DATA})
+                        SELECT ? ${Files.COLUMN_NAME}, ${newParent.id} ${Files.COLUMN_PARENT}, ${Files.COLUMN_DATA}
+                        FROM ${Files.TABLE_NAME}
+                        WHERE ${Files.COLUMN_ID} = ${file.id};
+                    """.trimIndent(),
+                    arrayOf(targetName)
+                )
+                val fileId = db.rawQuery("SELECT last_insert_rowid();", arrayOf()).use {
+                    if (!it.moveToFirst()) throw Exception("empty insert query result")
+                    it.getInt(0)
+                }
+                return SqliteFSFile(dbHelper, fileId, targetName, newParent)
+            } catch (e: Throwable) {
+                throw SqliteFSException("couldn't copy ${file.absolutePath} to ${newParent.absolutePath}", e)
+            }
         }
         return genericCopy(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
             throw SqliteFSFileExistsException("couldn't copy ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
@@ -36,6 +61,24 @@ open class SqliteFS(protected val dbHelper: SqliteFSDatabaseHelper) : VFS<Sqlite
             // no op
             return file.fromGeneric()
         }
+        if (file is SqliteFSFile) {
+            try {
+                val db = dbHelper.writableDatabase
+                val Files = SQLContract.Files
+                val affected = db.update(Files.TABLE_NAME,
+                    ContentValues().apply {
+                        put(Files.COLUMN_PARENT, newParent.id)
+                        put(Files.COLUMN_NAME, targetName)
+                    },
+                    "${Files.COLUMN_ID} = ${file.id}",
+                    arrayOf()
+                )
+                if (affected == 0) throw Exception("update didn't affect the file")
+                return SqliteFSFile(dbHelper, file.id, targetName, newParent)
+            } catch (e: Throwable) {
+                throw SqliteFSException("couldn't move ${file.absolutePath} to ${newParent.absolutePath}", e)
+            }
+        }
         return genericMove(file, newParent, targetName, overwrite, onExistsThrow = { targetFile ->
             throw SqliteFSFileExistsException("couldn't move ${file.absolutePath} to ${targetFile.absolutePath}: target file exists")
         })
@@ -52,7 +95,7 @@ open class SqliteFS(protected val dbHelper: SqliteFSDatabaseHelper) : VFS<Sqlite
 
 sealed class SqliteFSNode(
     protected val dbHelper: SqliteFSDatabaseHelper,
-    protected val id: Int,
+    val id: Int,
     override val name: String
 ) : VFSNode {
     val isRoot = id == SQLContract.Folders.ROOT_ID
