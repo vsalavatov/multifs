@@ -98,6 +98,22 @@ class SystemFSTest {
         f.remove()
     }
 
+    @Test
+    fun `folder remove throws if has children`() = runTest {
+        val subdir = fs.root.createFolder("subdir")
+        val f = subdir.createFile("tmp")
+        // no assertThrows for suspendable block
+        var ok = false
+        try {
+            subdir.remove()
+        } catch (e: SystemFSFolderNotEmptyException) {
+            ok = true
+        }
+        assert(ok)
+        f.remove()
+        subdir.remove()
+    }
+
     @Nested
     @DisplayName("StreamingIO tests")
     inner class StreamingIOTest {

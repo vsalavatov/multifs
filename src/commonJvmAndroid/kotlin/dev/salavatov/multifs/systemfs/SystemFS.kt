@@ -151,7 +151,7 @@ open class SystemFSFolder(nioPath: Path) : SystemNode(nioPath), Folder {
         try {
             nioPath.deleteExisting()
         } catch (e: DirectoryNotEmptyException) {
-            throw SystemFSException("couldn't delete $name: folder isn't empty", e)
+            throw SystemFSFolderNotEmptyException("couldn't delete $name: folder isn't empty", e)
         } catch (e: Throwable) {
             throw SystemFSException("couldn't delete $name", e)
         }

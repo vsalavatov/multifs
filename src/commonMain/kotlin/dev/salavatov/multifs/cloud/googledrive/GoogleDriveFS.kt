@@ -139,7 +139,7 @@ open class GDriveFolder(
         } catch (e: Throwable) {
             throw GoogleDriveFSException("remove failed", e)
         }
-        throw GoogleDriveFSException("cannot delete folder $id non-recursively as it contains children")
+        throw GoogleDriveFSFolderNotEmptyException("cannot delete folder $id non-recursively as it contains children")
     }
 
     override suspend fun createFile(name: PathPart): GDriveFile {

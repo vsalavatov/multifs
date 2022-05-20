@@ -4,6 +4,9 @@ import dev.salavatov.multifs.vfs.*
 
 open class SqliteFSException(message: String? = null, cause: Throwable? = null) : VFSException(message, cause)
 
+open class SqliteFSFolderNotEmptyException(message: String? = null, cause: Throwable? = null) :
+    SqliteFSException(message, cause), VFSFolderNotEmptyException
+
 open class SqliteFSNodeNotFoundException(message: String? = null, cause: Throwable? = null) :
     SqliteFSException(message, cause), VFSNodeNotFoundException
 
