@@ -4,6 +4,9 @@ import dev.salavatov.multifs.vfs.*
 
 open class GoogleDriveFSException(message: String? = null, cause: Throwable? = null) : VFSException(message, cause)
 
+open class GoogleDriveFSFolderNotEmptyException(message: String? = null, cause: Throwable? = null) :
+    GoogleDriveFSException(message, cause), VFSFolderNotEmptyException
+
 open class GoogleDriveFSNodeNotFoundException(message: String? = null, cause: Throwable? = null) :
     GoogleDriveFSException(message, cause), VFSNodeNotFoundException
 

@@ -96,7 +96,6 @@ open class SqliteFSFolder(
                 }
             }
 
-
             db.query(
                 SQLContract.Folders.TABLE_NAME,
                 arrayOf(SQLContract.Folders.COLUMN_ID, SQLContract.Folders.COLUMN_NAME),
@@ -167,7 +166,7 @@ open class SqliteFSFolder(
         if (!recursively) {
             val children = listFolder()
             if (children.isNotEmpty())
-                throw SqliteFSException("couldn't remove folder $absolutePath as it has children")
+                throw SqliteFSFolderNotEmptyException("couldn't remove folder $absolutePath as it has children")
         }
 
         val db = dbHelper.writableDatabase

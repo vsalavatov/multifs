@@ -4,8 +4,11 @@ import dev.salavatov.multifs.vfs.*
 
 open class SystemFSException(message: String? = null, cause: Throwable? = null) : VFSException(message, cause)
 
+open class SystemFSFolderNotEmptyException(message: String? = null, cause: Throwable? = null) :
+    SystemFSException(message, cause), VFSFolderNotEmptyException
+
 open class SystemFSNodeNotFoundException(message: String? = null, cause: Throwable? = null) :
-    SystemFSException(message, cause)
+    SystemFSException(message, cause), VFSNodeNotFoundException
 
 open class SystemFSFolderNotFoundException(message: String? = null, cause: Throwable? = null) :
     SystemFSNodeNotFoundException(message, cause), VFSFolderNotFoundException
